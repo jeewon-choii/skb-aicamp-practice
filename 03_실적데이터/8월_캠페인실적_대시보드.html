@@ -1,0 +1,325 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>SKB AI Camp | 8월 캠페인 실적 대시보드</title>
+<style>
+:root{
+  --skb-red:#EA002C; --skb-orange:#F47725;
+  --text-primary:#202124; --text-secondary:#5F6368; --text-muted:#80868B;
+  --bg-page:#F7F8FA; --bg-card:#FFFFFF; --border:#E5E7EB; --grid:#EEF0F2;
+  --status-good:#287D4E; --status-warn:#925000; --status-bad:#B42318;
+  --mute-bar:#C4C7CC;
+}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg-page);color:var(--text-primary);
+  font-family:Pretendard,"Malgun Gothic","Apple SD Gothic Neo",sans-serif;font-size:14px;line-height:1.55}
+.wrap{max-width:1240px;margin:0 auto;padding:28px 20px 48px}
+header{border-left:4px solid var(--skb-red);padding:2px 0 2px 14px;margin-bottom:22px}
+header .eyebrow{color:var(--skb-red);font-weight:700;font-size:13px;letter-spacing:.02em}
+header h1{margin:2px 0 4px;font-size:24px;line-height:1.3}
+header p{margin:0;color:var(--text-secondary);font-size:13px}
+h2{font-size:17px;margin:30px 0 12px}
+.exec{margin:-4px 0 14px;padding:9px 14px;background:#fff;border:1px solid var(--border);border-left:4px solid var(--skb-red);border-radius:8px;font-size:14px;font-weight:600;color:var(--text-primary);word-break:keep-all}
+.exec b{color:var(--skb-red);font-weight:700;margin-right:8px}
+h2 small{font-weight:400;color:var(--text-secondary);font-size:13px;margin-left:6px}
+.grid{display:grid;gap:14px}
+.kpis{grid-template-columns:repeat(2,1fr)}@media (min-width:640px){.kpis{grid-template-columns:repeat(3,1fr)}}@media (min-width:1100px){.kpis{grid-template-columns:repeat(6,1fr)}}
+.two{grid-template-columns:repeat(auto-fit,minmax(min(100%,520px),1fr))}
+.card{background:var(--bg-card);border:1px solid var(--border);border-radius:12px;padding:16px 18px;min-width:0}
+.card h3{margin:0 0 2px;font-size:15px}
+.card .sub{margin:0 0 14px;color:var(--text-secondary);font-size:12.5px}
+.kpi .label{color:var(--text-secondary);font-size:13px}
+.kpi .value{font-size:26px;font-weight:700;margin:4px 0 2px;line-height:1.2;word-break:keep-all}
+.kpi .value span{font-size:15px;font-weight:600;margin-left:2px}
+.kpi .note{color:var(--text-muted);font-size:12px}
+.kpi.accent{border-top:3px solid var(--skb-red)}
+.insights{grid-template-columns:repeat(auto-fit,minmax(min(100%,340px),1fr))}
+.ins .tag{display:inline-block;font-size:11.5px;font-weight:700;color:var(--skb-red);background:#FDE7EB;border-radius:4px;padding:1px 7px;margin-bottom:6px}
+.ins h3{font-size:15px;line-height:1.4;margin:0 0 6px;word-break:keep-all}
+.ins p{margin:0;color:var(--text-secondary);font-size:13px;word-break:keep-all}
+/* bars */
+.legend{display:flex;gap:16px;flex-wrap:wrap;font-size:12.5px;color:var(--text-secondary);margin:-6px 0 12px}
+.legend i{display:inline-block;width:10px;height:10px;border-radius:2px;margin-right:6px;vertical-align:-1px}
+.brow{display:grid;grid-template-columns:72px 1fr;gap:10px;align-items:center;margin-bottom:12px}
+.brow .name{font-weight:600;font-size:13px}
+.bars{display:flex;flex-direction:column;gap:2px}
+.bline{display:flex;align-items:center;gap:8px;min-height:18px}
+.bar{height:14px;border-radius:0 4px 4px 0;min-width:2px;outline-offset:2px}
+.bval{position:relative;z-index:1;background:#fff;padding:0 3px;font-size:12.5px;color:var(--text-primary);white-space:nowrap;font-variant-numeric:tabular-nums}
+.ref{position:relative}
+.refline{position:absolute;top:-4px;bottom:-4px;width:1px;background:var(--text-secondary)}
+.reflabel{position:absolute;top:-20px;font-size:11.5px;color:var(--text-secondary);white-space:nowrap;transform:translateX(-50%)}
+/* heatmap */
+table{border-collapse:collapse;width:100%;font-variant-numeric:tabular-nums}
+.heat td,.heat th{padding:0;text-align:center}
+.heat th{font-size:12.5px;color:var(--text-secondary);font-weight:600;padding:6px 4px}
+.heat th.rh{text-align:left;color:var(--text-primary)}
+.heat td div{margin:2px;border-radius:6px;padding:12px 4px;font-size:13.5px;font-weight:600}
+.scale{display:flex;align-items:center;gap:6px;font-size:12px;color:var(--text-secondary);margin-top:10px;flex-wrap:wrap}
+.scale span.sw{width:26px;height:10px;border-radius:2px;display:inline-block}
+/* tables */
+.tbl{overflow-x:auto}
+.tbl table th,.tbl table td{padding:8px 10px;border-bottom:1px solid var(--border);text-align:right;white-space:nowrap}
+.tbl table th{font-size:12.5px;color:var(--text-secondary);font-weight:600;background:#FAFAFB}
+.tbl table td:first-child,.tbl table th:first-child{text-align:left}
+.tbl tr.total td{font-weight:700;background:#FDF3F5}
+.mini{display:inline-block;height:6px;border-radius:0 3px 3px 0;background:var(--skb-red);vertical-align:middle;margin-left:6px}
+/* line */
+.chart{width:100%;position:relative}
+.chart svg{display:block;width:100%;overflow:visible}
+.chart text{font-family:inherit}
+/* anomalies */
+.anoms{display:flex;flex-direction:column;gap:10px}
+.anom{display:grid;grid-template-columns:96px 1fr;gap:12px;align-items:start}
+.badge{display:inline-flex;align-items:center;gap:5px;font-size:12px;font-weight:700;border-radius:999px;padding:3px 10px;white-space:nowrap;justify-self:start}
+.badge.warn{color:var(--status-warn);background:#FFF4E5;border:1px solid #F5D7A8}
+.badge.info{color:var(--text-secondary);background:#F1F3F4;border:1px solid var(--border)}
+.anom h3{font-size:14.5px;margin:0 0 3px}
+.anom p{margin:0;color:var(--text-secondary);font-size:13px;word-break:keep-all}
+footer{margin-top:28px;color:var(--text-muted);font-size:12px;line-height:1.7}
+#tip{position:fixed;pointer-events:none;background:#202124;color:#fff;font-size:12.5px;padding:8px 10px;border-radius:8px;
+  box-shadow:0 4px 14px rgba(0,0,0,.18);opacity:0;transition:opacity .08s;z-index:10;max-width:260px;line-height:1.5}
+#tip b{font-weight:700}
+[tabindex]:focus-visible{outline:2px solid var(--skb-red)}
+@media (max-width:560px){.anom{grid-template-columns:1fr;gap:4px}.brow{grid-template-columns:60px 1fr}.kpi .value{font-size:22px}}
+</style>
+</head>
+<body>
+<div class="wrap">
+<header>
+  <div class="eyebrow">SKB AI Camp</div>
+  <h1>8월 캠페인 실적 대시보드 — 영남·충청·호남·강원제주</h1>
+  <p id="meta"></p>
+</header>
+
+<section class="grid kpis" id="kpis"></section>
+
+<h2>핵심 인사이트</h2>
+<p class="exec" id="ex-ins"></p>
+<section class="grid insights" id="insights"></section>
+
+<h2>권역별 성과 <small>같은 집행 비중에서 얼마나 완료를 냈는지</small></h2>
+<p class="exec" id="ex-region"></p>
+<section class="grid two">
+  <div class="card">
+    <h3>집행 비중 vs 완료 비중</h3>
+    <p class="sub">전체 대비 비중(%) · 빨강이 주황보다 길면 비용 대비 완료가 적어요</p>
+    <div class="legend"><span><i style="background:var(--skb-red)"></i>집행액 비중</span><span><i style="background:var(--skb-orange)"></i>완료 건수 비중</span></div>
+    <div id="shareChart"></div>
+  </div>
+  <div class="card">
+    <h3>완료 1건당 비용</h3>
+    <p class="sub">집행액 ÷ 완료 건수 (원) · 세로선은 4개 권역 평균</p>
+    <div id="cpaRegion"></div>
+  </div>
+</section>
+
+<h2>캠페인별 성과 <small>캠페인 코드 기준 (C01~C03)</small></h2>
+<p class="exec" id="ex-camp"></p>
+<section class="grid two">
+  <div class="card">
+    <h3>권역 × 캠페인 완료 1건당 비용</h3>
+    <p class="sub">진할수록 완료 1건을 얻는 데 돈이 많이 들어요 (원)</p>
+    <div id="heat"></div>
+  </div>
+  <div class="card">
+    <h3>캠페인별 완료 1건당 비용</h3>
+    <p class="sub">4개 권역 합산 (원) · 세로선은 전체 평균</p>
+    <div id="cpaCamp"></div>
+    <div class="tbl" style="margin-top:14px"><table id="campTbl"></table></div>
+  </div>
+</section>
+
+<h2>일별 추이 <small>8월 1일~31일, 확정실적 기준</small></h2>
+<p class="exec" id="ex-daily"></p>
+<section class="grid two">
+  <div class="card"><h3>일별 집행액</h3><p class="sub">원 · 점에 마우스를 올리면 값이 보여요</p><div class="chart" id="lineAmt"></div></div>
+  <div class="card"><h3>일별 완료 건수</h3><p class="sub">건 · 점에 마우스를 올리면 값이 보여요</p><div class="chart" id="lineDone"></div></div>
+</section>
+
+<h2>퍼널·상품 비교</h2>
+<p class="exec" id="ex-funnel"></p>
+<section class="grid two">
+  <div class="card">
+    <h3>권역별 퍼널 (상담 → 접수 → 완료)</h3>
+    <p class="sub">전환율 = 접수÷상담, 완료율 = 완료÷접수, 취소율 = 취소÷접수</p>
+    <div class="tbl"><table id="funnel"></table></div>
+  </div>
+  <div class="card">
+    <h3>상품별 비교</h3>
+    <p class="sub">인터넷 vs 인터넷+B tv</p>
+    <div class="tbl"><table id="prodTbl"></table></div>
+  </div>
+</section>
+
+<h2>특이점 <small>데이터 품질·이상값</small></h2>
+<p class="exec" id="ex-anom"></p>
+<section class="card anoms" id="anoms"></section>
+
+<h2>권역 요약표</h2>
+<p class="exec" id="ex-table"></p>
+<section class="card tbl"><table id="regionTbl"></table></section>
+
+<footer id="foot"></footer>
+</div>
+<div id="tip" role="tooltip"></div>
+
+<script>
+const D = {"execs": {"ins": "비용 효율은 영남과 캠페인 C02에서 가장 떨어지고, 개선 포인트는 상품이 아니라 상담→접수 전환과 집행 단가예요.", "region": "영남은 집행의 39.0%를 쓰고 완료는 24.5%에 그쳐 완료당 비용 16,286원(평균의 1.6배)이고, 충청은 가장 낮은 7,618원으로 가장 많은 1,459건을 완료했어요.", "camp": "C02는 집행의 48.9%를 차지하지만 완료당 19,766원으로 C03의 3.3배이고, 영남×C02(30,401원)가 가장 비효율적인 조합이에요.", "daily": "하루 집행액은 평균 1,544,207원에서 ±8% 범위로 안정적이고, 8/31 급감은 실적 하락이 아니라 미확정 4건 보류 때문이에요.", "funnel": "접수→완료율(75.8~77.2%)과 취소율(8.2~8.9%)은 권역별로 비슷하고 상담→접수 전환율(17.6~29.7%)에서 차이가 나며, 상품 간 완료당 비용 차이는 1% 수준이에요.", "anom": "확인 필요 3건(8/31 미집계, 4개 권역 공통 오류 패턴, 8/6 동일 수정금액)은 담당자 확인 후 실적에 반영해야 해요.", "table": "4개 권역 확정 368건, 집행 47,524,000원, 완료 4,646건, 완료당 비용 10,229원이에요."}, "T": {"n": 368, "amt": 47524000, "lead": 25055, "appl": 6086, "cancel": 519, "done": 4646, "conv": 24.29056076631411, "comp": 76.33913900755833, "canc": 8.527768649359185, "cpa": 10229.014205768402, "cpl": 1896.7870684494112}, "R": {"영남": {"n": 92, "amt": 18533000, "lead": 8395, "appl": 1477, "cancel": 131, "done": 1138, "conv": 17.593805836807626, "comp": 77.04807041299932, "canc": 8.86932972241029, "cpa": 16285.588752196836, "cpl": 2207.62358546754}, "충청": {"n": 92, "amt": 11114500, "lead": 6474, "appl": 1926, "cancel": 160, "done": 1459, "conv": 29.74976830398517, "comp": 75.75285565939771, "canc": 8.307372793354102, "cpa": 7617.888965044551, "cpl": 1716.7902378745753}, "호남": {"n": 92, "amt": 9189900, "lead": 5794, "appl": 1555, "cancel": 136, "done": 1178, "conv": 26.838108387987575, "comp": 75.7556270096463, "canc": 8.745980707395498, "cpa": 7801.273344651952, "cpl": 1586.1063168795306}, "강원제주": {"n": 92, "amt": 8686600, "lead": 4392, "appl": 1128, "cancel": 92, "done": 871, "conv": 25.683060109289617, "comp": 77.21631205673759, "canc": 8.156028368794328, "cpa": 9973.134328358208, "cpl": 1977.823315118397}}, "C": {"C01": {"n": 124, "amt": 14056400, "lead": 10603, "appl": 2304, "cancel": 202, "done": 1750, "conv": 21.729699141752334, "comp": 75.95486111111111, "canc": 8.76736111111111, "cpa": 8032.228571428572, "cpl": 1325.700273507498}, "C02": {"n": 124, "amt": 23225300, "lead": 6214, "appl": 1547, "cancel": 132, "done": 1175, "conv": 24.89539748953975, "comp": 75.95345830639948, "canc": 8.532643826761474, "cpa": 19766.212765957447, "cpl": 3737.5764402961054}, "C03": {"n": 120, "amt": 10242300, "lead": 8238, "appl": 2235, "cancel": 185, "done": 1721, "conv": 27.13037144938092, "comp": 77.00223713646533, "canc": 8.277404921700224, "cpa": 5951.365485183033, "cpl": 1243.2993445010925}}, "P": {"인터넷": {"n": 184, "amt": 23619700, "lead": 12500, "appl": 3053, "cancel": 272, "done": 2321, "conv": 24.424, "comp": 76.02358336062889, "canc": 8.909269570913855, "cpa": 10176.518741921585, "cpl": 1889.576}, "인터넷+B tv": {"n": 184, "amt": 23904300, "lead": 12555, "appl": 3033, "cancel": 247, "done": 2325, "conv": 24.157706093189965, "comp": 76.65677546983186, "canc": 8.143752060666007, "cpa": 10281.41935483871, "cpl": 1903.9665471923536}}, "RC": {"영남": {"C01": {"n": 31, "amt": 5492600, "lead": 3405, "appl": 502, "cancel": 44, "done": 386, "conv": 14.743024963289281, "comp": 76.89243027888446, "canc": 8.764940239043826, "cpa": 14229.533678756477, "cpl": 1613.0983847283408}, "C02": {"n": 31, "amt": 8877000, "lead": 2130, "appl": 385, "cancel": 29, "done": 292, "conv": 18.07511737089202, "comp": 75.84415584415585, "canc": 7.532467532467532, "cpa": 30400.68493150685, "cpl": 4167.605633802817}, "C03": {"n": 30, "amt": 4163400, "lead": 2860, "appl": 590, "cancel": 58, "done": 460, "conv": 20.62937062937063, "comp": 77.96610169491525, "canc": 9.830508474576272, "cpa": 9050.869565217392, "cpl": 1455.7342657342658}}, "충청": {"C01": {"n": 31, "amt": 3372300, "lead": 2848, "appl": 776, "cancel": 72, "done": 580, "conv": 27.247191011235955, "comp": 74.74226804123711, "canc": 9.278350515463918, "cpa": 5814.310344827586, "cpl": 1184.0941011235955}, "C02": {"n": 31, "amt": 5364900, "lead": 1558, "appl": 478, "cancel": 40, "done": 356, "conv": 30.680359435173298, "comp": 74.47698744769873, "canc": 8.368200836820083, "cpa": 15069.943820224718, "cpl": 3443.4531450577665}, "C03": {"n": 30, "amt": 2377300, "lead": 2068, "appl": 672, "cancel": 48, "done": 523, "conv": 32.495164410058024, "comp": 77.82738095238095, "canc": 7.142857142857142, "cpa": 4545.506692160612, "cpl": 1149.5647969052225}}, "호남": {"C01": {"n": 31, "amt": 2638100, "lead": 2473, "appl": 595, "cancel": 55, "done": 450, "conv": 24.059846340477154, "comp": 75.63025210084034, "canc": 9.243697478991598, "cpa": 5862.444444444444, "cpl": 1066.7610190052567}, "C02": {"n": 31, "amt": 4735400, "lead": 1364, "appl": 377, "cancel": 35, "done": 291, "conv": 27.639296187683282, "comp": 77.18832891246684, "canc": 9.283819628647215, "cpa": 16272.852233676977, "cpl": 3471.7008797653957}, "C03": {"n": 30, "amt": 1816400, "lead": 1957, "appl": 583, "cancel": 46, "done": 437, "conv": 29.79049565661727, "comp": 74.95711835334477, "canc": 7.890222984562607, "cpa": 4156.521739130435, "cpl": 928.1553398058253}}, "강원제주": {"C01": {"n": 31, "amt": 2553400, "lead": 1877, "appl": 431, "cancel": 31, "done": 334, "conv": 22.9621736814065, "comp": 77.49419953596288, "canc": 7.192575406032482, "cpa": 7644.9101796407185, "cpl": 1360.3622802344166}, "C02": {"n": 31, "amt": 4248000, "lead": 1162, "appl": 307, "cancel": 28, "done": 236, "conv": 26.41996557659208, "comp": 76.8729641693811, "canc": 9.120521172638437, "cpa": 18000.0, "cpl": 3655.7659208261616}, "C03": {"n": 30, "amt": 1885200, "lead": 1353, "appl": 390, "cancel": 33, "done": 301, "conv": 28.824833702882486, "comp": 77.17948717948718, "canc": 8.461538461538462, "cpa": 6263.12292358804, "cpl": 1393.3481152993347}}}, "daily": [{"day": 1, "amt": 1559000, "done": 143, "lead": 749, "n": 12}, {"day": 2, "amt": 1813400, "done": 153, "lead": 757, "n": 12}, {"day": 3, "amt": 1516900, "done": 187, "lead": 934, "n": 12}, {"day": 4, "amt": 1547300, "done": 158, "lead": 846, "n": 12}, {"day": 5, "amt": 1552700, "done": 158, "lead": 866, "n": 12}, {"day": 6, "amt": 1412800, "done": 141, "lead": 689, "n": 12}, {"day": 7, "amt": 1593100, "done": 151, "lead": 818, "n": 12}, {"day": 8, "amt": 1477100, "done": 180, "lead": 934, "n": 12}, {"day": 9, "amt": 1779600, "done": 140, "lead": 827, "n": 12}, {"day": 10, "amt": 1563300, "done": 164, "lead": 938, "n": 12}, {"day": 11, "amt": 1299100, "done": 142, "lead": 794, "n": 12}, {"day": 12, "amt": 1539500, "done": 150, "lead": 840, "n": 12}, {"day": 13, "amt": 1442100, "done": 127, "lead": 680, "n": 12}, {"day": 14, "amt": 1645300, "done": 146, "lead": 766, "n": 12}, {"day": 15, "amt": 1566400, "done": 155, "lead": 846, "n": 12}, {"day": 16, "amt": 1391000, "done": 160, "lead": 905, "n": 12}, {"day": 17, "amt": 1473200, "done": 132, "lead": 745, "n": 12}, {"day": 18, "amt": 1700300, "done": 157, "lead": 846, "n": 12}, {"day": 19, "amt": 1491400, "done": 159, "lead": 825, "n": 12}, {"day": 20, "amt": 1327500, "done": 137, "lead": 785, "n": 12}, {"day": 21, "amt": 1348300, "done": 165, "lead": 866, "n": 12}, {"day": 22, "amt": 1716100, "done": 127, "lead": 752, "n": 12}, {"day": 23, "amt": 1525000, "done": 164, "lead": 827, "n": 12}, {"day": 24, "amt": 1650200, "done": 153, "lead": 827, "n": 12}, {"day": 25, "amt": 1716200, "done": 136, "lead": 780, "n": 12}, {"day": 26, "amt": 1474200, "done": 165, "lead": 786, "n": 12}, {"day": 27, "amt": 1436100, "done": 166, "lead": 908, "n": 12}, {"day": 28, "amt": 1619000, "done": 147, "lead": 791, "n": 12}, {"day": 29, "amt": 1469100, "done": 154, "lead": 821, "n": 12}, {"day": 30, "amt": 1681000, "done": 150, "lead": 860, "n": 12}, {"day": 31, "amt": 1197800, "done": 79, "lead": 447, "n": 8}], "REG": ["영남", "충청", "호남", "강원제주"], "CAMP": ["C01", "C02", "C03"], "insights": [{"tag": "효율", "title": "영남은 집행 비중 39.0%, 완료 비중 24.5%", "body": "영남의 완료 1건당 비용은 16,286원이에요. 4개 권역 평균 10,229원의 1.6배예요. 상담→접수 전환율이 17.6%로 가장 낮고, 상담 1건당 비용도 2,208원으로 가장 높아요."}, {"tag": "캠페인", "title": "캠페인 C02가 집행액의 48.9%를 쓰고 완료는 25.3%", "body": "C02의 완료당 비용은 19,766원으로 C03(5,951원)의 3.3배예요. 4개 권역 모두에서 가장 비싼 캠페인이에요."}, {"tag": "집중 점검", "title": "영남 × C02 조합의 완료당 비용 30,401원 — 가장 높아요", "body": "집행 8,877,000원(전체의 18.7%)으로 완료 292건(전체의 6.3%)을 냈어요. 다른 3개 권역 C02 평균(16,249원/완료) 수준이었다면 같은 완료 건수에 약 4,130,000원이 덜 들었을 거예요(단순 계산 참고값)."}, {"tag": "우수", "title": "충청이 완료 1,459건으로 가장 많고 비용 효율도 1위", "body": "집행 비중 23.4%로 완료의 31.4%를 냈어요. 완료당 비용 7,618원, 상담→접수 전환율 29.7%로 모두 가장 좋아요."}, {"tag": "구조", "title": "권역 차이는 퍼널 앞단(상담→접수)에서 생겨요", "body": "접수→완료율은 75.8~77.2%, 취소율은 8.2~8.9%로 권역별 차이가 작아요. 반면 상담→접수 전환율은 17.6~29.7%로 차이가 커요. 개선 여지는 상담 단계와 집행 단가에 있어요."}, {"tag": "상품", "title": "상품 간 성과 차이는 거의 없어요", "body": "인터넷 완료당 10,177원, 인터넷+B tv 완료당 10,281원으로 차이가 평균의 1% 수준이에요. 성과는 상품보다 권역과 캠페인에서 갈려요."}], "anomalies": [{"lv": "확인 필요", "title": "8/31 실적이 아직 다 들어오지 않았어요", "body": "4개 권역의 8/31 -3103 행(총 4건, 368,100원)이 미확정이라 보류했어요. 그래서 8/31은 8건, 1,197,800원만 집계됐어요. 확정되면 월 합계가 늘어나요."}, {"lv": "확인 필요", "title": "4개 권역 원본에 똑같은 오류 패턴이 반복돼요", "body": "-0103·-0202·-0203 완전 중복, -0201 2차 수정, -0603 1차 0원→2차 수정, OUT1(7/31)·OUT2(9/1) 기간 밖 행이 네 지역 모두에 있어요. 지역별 실수보다는 공통 취합 양식이나 절차 문제일 수 있어요."}, {"lv": "확인 필요", "title": "8/6 캠페인 C03(-0603) 금액이 4개 권역 모두 20,000원", "body": "1차 0원에서 2차로 수정된 값이 네 지역 모두 같아요. 완료당 비용이 1,053~1,538원으로 평소보다 매우 낮아요. 수정 금액이 실제 값인지 확인이 필요해요."}, {"lv": "참고", "title": "완료당 비용 상위 8건이 모두 영남 C02", "body": "가장 높은 건은 08/22 SB26-YNG-2202로, 343,300원에 완료 4건(완료당 85,825원)이에요."}, {"lv": "참고", "title": "영남 고액 집행일", "body": "08/15 SB26-YNG-1502 406,500원 / 08/02 SB26-YNG-0202 400,200원 — 영남 건당 평균 201,446원의 약 2배예요."}, {"lv": "참고", "title": "일별 집행은 안정적이에요", "body": "8/31을 빼면 하루 집행액은 1,299,100원(11일)~1,813,400원(2일)이고, 평균 1,544,207원 대비 변동은 ±8% 수준이에요. 요일별 하루 평균도 전체 평균의 -9%~+6% 범위라 뚜렷한 요일 패턴은 없어요."}, {"lv": "참고", "title": "영남은 7월보다 집행액 +9.0%", "body": "영남 원본의 [7월 참고요약] 기준 7월 17,000,000원 → 8월 확정 18,533,000원이에요. 다른 권역은 7월 자료가 없어 비교하지 못했어요."}], "held": 4, "wr": "영남", "wc": "C02", "worst": "영남"};
+const RED='#EA002C', ORANGE='#F47725', MUTE='#C4C7CC';
+const f0 = v => Math.round(v).toLocaleString('ko-KR');
+const f1 = v => v.toFixed(1)+'%';
+const $ = id => document.getElementById(id);
+const esc = s => String(s).replace(/[&<>"]/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
+const T = D.T;
+Object.entries(D.execs).forEach(([k,v]) => { const el = $('ex-'+k); if (el) el.innerHTML = '<b>요약</b>' + esc(v); });
+
+// tooltip
+const tip = $('tip');
+function showTip(html, x, y){ tip.innerHTML = html; tip.style.opacity = 1;
+  const w = tip.offsetWidth, h = tip.offsetHeight;
+  tip.style.left = Math.min(window.innerWidth - w - 8, x + 14) + 'px';
+  tip.style.top = Math.max(8, y - h - 10) + 'px'; }
+function hideTip(){ tip.style.opacity = 0; }
+window.addEventListener("scroll", hideTip, {passive:true});
+function bindTip(el, html){
+  el.tabIndex = 0;
+  el.addEventListener('mousemove', e => showTip(html, e.clientX, e.clientY));
+  el.addEventListener('mouseleave', hideTip);
+  el.addEventListener('focus', () => { const r = el.getBoundingClientRect(); showTip(html, r.right, r.top); });
+  el.addEventListener('blur', hideTip);
+}
+
+$('meta').textContent = `출처: 03_실적데이터/8월_캠페인실적_4개권역_통합본.xlsx [확정실적] · 확정 ${T.n}건 (미확정 보류 ${D.held}건 제외) · 금액 원, VAT 별도 · 교육용 가상 자료 (실제 SK브로드밴드 실적 아님)`;
+
+// KPI
+const kpis = [
+  ['집행액', f0(T.amt), '원', `확정 ${T.n}건 합계`, true],
+  ['완료 건수', f0(T.done), '건', `접수 ${f0(T.appl)}건 중`],
+  ['완료 1건당 비용', f0(T.cpa), '원', `상담 1건당 ${f0(T.cpl)}원`],
+  ['상담 → 접수 전환율', T.conv.toFixed(1), '%', `상담 ${f0(T.lead)}건 기준`],
+  ['접수 → 완료율', T.comp.toFixed(1), '%', `완료 ${f0(T.done)} ÷ 접수 ${f0(T.appl)}`],
+  ['취소율', T.canc.toFixed(1), '%', `취소 ${f0(T.cancel)}건 ÷ 접수`],
+];
+$('kpis').innerHTML = kpis.map(k => `<div class="card kpi${k[4]?' accent':''}"><div class="label">${k[0]}</div><div class="value">${k[1]}<span>${k[2]}</span></div><div class="note">${k[3]}</div></div>`).join('');
+
+// insights
+$('insights').innerHTML = D.insights.map(i => `<div class="card ins"><span class="tag">${esc(i.tag)}</span><h3>${esc(i.title)}</h3><p>${esc(i.body)}</p></div>`).join('');
+
+// share chart (grouped bars)
+(function(){
+  const rows = D.REG.map(r => ({r, a: D.R[r].amt/T.amt*100, d: D.R[r].done/T.done*100}));
+  const max = Math.max(...rows.flatMap(x => [x.a, x.d]));
+  $('shareChart').innerHTML = rows.map(x => `<div class="brow"><div class="name">${x.r}</div><div class="bars">
+     <div class="bline"><div class="bar" data-k="a" style="width:calc(${x.a/max*82}%);background:${RED}"></div><span class="bval">${x.a.toFixed(1)}%</span></div>
+     <div class="bline"><div class="bar" data-k="d" style="width:calc(${x.d/max*82}%);background:${ORANGE}"></div><span class="bval">${x.d.toFixed(1)}%</span></div>
+   </div></div>`).join('');
+  $('shareChart').querySelectorAll('.brow').forEach((row, i) => {
+    const r = rows[i].r, R = D.R[r];
+    row.querySelectorAll('.bar').forEach(b => bindTip(b, b.dataset.k==='a'
+      ? `<b>${r} 집행액</b><br>${f0(R.amt)}원 (${rows[i].a.toFixed(1)}%)`
+      : `<b>${r} 완료</b><br>${f0(R.done)}건 (${rows[i].d.toFixed(1)}%)`));
+  });
+})();
+
+// highlight bar chart with reference line
+function hbar(el, items, avg, avgLabel, hi){
+  const max = Math.max(...items.map(x => x.v), avg) * 1.08;
+  const w = v => v/max*80;
+  el.innerHTML = `<div class="ref" style="margin-top:22px">` + items.map(x => `<div class="brow"><div class="name">${x.k}</div>
+     <div class="bline"><div class="bar" style="width:${w(x.v)}%;background:${x.k===hi?RED:MUTE}"></div><span class="bval">${f0(x.v)}원</span></div></div>`).join('')
+     + `<div class="refline" style="left:calc(82px + (100% - 82px) * ${w(avg)/100})"></div><div class="reflabel" style="left:calc(82px + (100% - 82px) * ${w(avg)/100})">${avgLabel} ${f0(avg)}원</div></div>`;
+  el.querySelectorAll('.bar').forEach((b, i) => bindTip(b, items[i].tip));
+}
+hbar($('cpaRegion'), D.REG.map(r => ({k:r, v:D.R[r].cpa, tip:`<b>${r}</b><br>완료당 ${f0(D.R[r].cpa)}원<br>집행 ${f0(D.R[r].amt)}원 · 완료 ${f0(D.R[r].done)}건`})), T.cpa, '평균', D.worst);
+const cw = D.CAMP.reduce((a, c) => D.C[c].cpa > D.C[a].cpa ? c : a);
+hbar($('cpaCamp'), D.CAMP.map(c => ({k:c, v:D.C[c].cpa, tip:`<b>캠페인 ${c}</b><br>완료당 ${f0(D.C[c].cpa)}원<br>집행 ${f0(D.C[c].amt)}원 · 완료 ${f0(D.C[c].done)}건`})), T.cpa, '평균', cw);
+$('campTbl').innerHTML = `<tr><th>캠페인</th><th>집행액(원)</th><th>집행 비중</th><th>완료(건)</th><th>완료 비중</th><th>전환율</th></tr>` +
+  D.CAMP.map(c => { const x = D.C[c]; return `<tr><td>${c}</td><td>${f0(x.amt)}</td><td>${f1(x.amt/T.amt*100)}</td><td>${f0(x.done)}</td><td>${f1(x.done/T.done*100)}</td><td>${f1(x.conv)}</td></tr>`; }).join('');
+
+// heatmap
+(function(){
+  const ramp = ['#FDE7EB','#F9B8C4','#F2788F','#EA002C','#A8001F'];
+  const vals = D.REG.flatMap(r => D.CAMP.map(c => D.RC[r][c].cpa));
+  const lo = Math.min(...vals), hi = Math.max(...vals);
+  const step = (hi - lo) / ramp.length;
+  const bin = v => Math.min(ramp.length - 1, Math.floor((v - lo) / step));
+  let h = `<table class="heat"><tr><th></th>${D.CAMP.map(c => `<th>${c}</th>`).join('')}</tr>`;
+  D.REG.forEach(r => { h += `<tr><th class="rh">${r}</th>` + D.CAMP.map(c => { const v = D.RC[r][c].cpa, b = bin(v);
+      return `<td><div data-r="${r}" data-c="${c}" style="background:${ramp[b]};color:${b>=3?'#fff':'#202124'}">${f0(v)}</div></td>`; }).join('') + '</tr>'; });
+  h += '</table><div class="scale">낮음 ' + ramp.map((c, i) => `<span class="sw" style="background:${c}" title="${f0(lo+step*i)}~${f0(lo+step*(i+1))}원"></span>`).join('') + ` 높음 <span style="margin-left:8px">(${f0(lo)}원 ~ ${f0(hi)}원, 5구간)</span></div>`;
+  $('heat').innerHTML = h;
+  $('heat').querySelectorAll('td div').forEach(el => { const x = D.RC[el.dataset.r][el.dataset.c];
+    bindTip(el, `<b>${el.dataset.r} · ${el.dataset.c}</b><br>완료당 ${f0(x.cpa)}원<br>집행 ${f0(x.amt)}원 · 완료 ${f0(x.done)}건<br>전환율 ${f1(x.conv)}`); });
+})();
+
+// line charts
+function line(el, key, color, unit, fmt){
+  const data = D.daily;
+  function draw(){
+    const W = el.clientWidth, H = 240, m = {l:62, r:14, t:24, b:30};
+    const iw = W - m.l - m.r, ih = H - m.t - m.b;
+    const vals = data.map(d => d[key]);
+    const vmax = Math.max(...vals), vmin = Math.min(...vals);
+    const pad = (vmax - vmin) * 0.15;
+    const raw = (vmax + pad - Math.max(0, vmin - pad)) / 4;
+    const mag = Math.pow(10, Math.floor(Math.log10(raw)));
+    const stepv = Math.ceil(raw / mag) * mag;
+    const y0 = Math.floor(Math.max(0, vmin - pad) / stepv) * stepv;
+    const y1 = y0 + stepv * 4 >= vmax ? y0 + stepv * 4 : Math.ceil(vmax / stepv) * stepv;
+    const x = i => m.l + (i / (data.length - 1)) * iw;
+    const y = v => m.t + ih - (v - y0) / (y1 - y0) * ih;
+    let s = `<svg height="${H}" viewBox="0 0 ${W} ${H}" role="img" aria-label="일별 ${unit} 추이">`;
+    for (let v = y0; v <= y1 + 1e-9; v += stepv) s += `<line x1="${m.l}" x2="${W-m.r}" y1="${y(v)}" y2="${y(v)}" stroke="#EEF0F2"/><text x="${m.l-8}" y="${y(v)+4}" text-anchor="end" font-size="11" fill="#5F6368">${fmt(v)}</text>`;
+    data.forEach((d, i) => { if ([1,8,15,22,29,31].includes(d.day)) s += `<text x="${x(i)}" y="${H-8}" text-anchor="middle" font-size="11" fill="#5F6368">8/${d.day}</text>`; });
+    s += `<polyline fill="none" stroke="${color}" stroke-width="2" stroke-linejoin="round" points="${data.map((d,i)=>x(i)+','+y(d[key])).join(' ')}"/>`;
+    const li = data.length - 1;
+    s += `<circle cx="${x(li)}" cy="${y(data[li][key])}" r="4.5" fill="#fff" stroke="${color}" stroke-width="2"/>`;
+    s += `<text x="${x(li)-8}" y="${y(data[li][key])+18}" text-anchor="end" font-size="11.5" fill="#925000">⚠ 8/31 보류 ${D.held}건 제외</text>`;
+    s += `<line class="xh" y1="${m.t}" y2="${m.t+ih}" stroke="#80868B" stroke-width="1" visibility="hidden"/><circle class="dot" r="5" fill="${color}" stroke="#fff" stroke-width="2" visibility="hidden"/>`;
+    s += `<rect class="hit" x="${m.l}" y="${m.t}" width="${iw}" height="${ih}" fill="transparent"/></svg>`;
+    el.innerHTML = s;
+    const svg = el.querySelector('svg'), xh = svg.querySelector('.xh'), dot = svg.querySelector('.dot');
+    svg.querySelector('.hit').addEventListener('mousemove', e => {
+      const r = svg.getBoundingClientRect();
+      const i = Math.max(0, Math.min(li, Math.round((e.clientX - r.left - m.l) / iw * li)));
+      const d = data[i];
+      xh.setAttribute('x1', x(i)); xh.setAttribute('x2', x(i)); xh.setAttribute('visibility', 'visible');
+      dot.setAttribute('cx', x(i)); dot.setAttribute('cy', y(d[key])); dot.setAttribute('visibility', 'visible');
+      showTip(`<b>8월 ${d.day}일</b><br>집행 ${f0(d.amt)}원<br>완료 ${f0(d.done)}건 · 상담 ${f0(d.lead)}건<br>집계 ${d.n}건${d.day===31?' (보류 '+D.held+'건 제외)':''}`, e.clientX, e.clientY);
+    });
+    svg.querySelector('.hit').addEventListener('mouseleave', () => { xh.setAttribute('visibility','hidden'); dot.setAttribute('visibility','hidden'); hideTip(); });
+  }
+  draw(); let t; window.addEventListener('resize', () => { clearTimeout(t); t = setTimeout(draw, 120); });
+}
+line($('lineAmt'), 'amt', RED, '집행액', v => f0(v/1e4)+'만');
+line($('lineDone'), 'done', ORANGE, '완료 건수', v => f0(v));
+
+// funnel
+(function(){
+  const mx = Math.max(...D.REG.map(r => D.R[r].conv));
+  $('funnel').innerHTML = `<tr><th>권역</th><th>상담</th><th>접수</th><th>완료</th><th>전환율</th><th>완료율</th><th>취소율</th></tr>` +
+    D.REG.map(r => { const x = D.R[r]; return `<tr><td>${r}</td><td>${f0(x.lead)}</td><td>${f0(x.appl)}</td><td>${f0(x.done)}</td><td>${f1(x.conv)}<span class="mini" style="width:${x.conv/mx*40}px"></span></td><td>${f1(x.comp)}</td><td>${f1(x.canc)}</td></tr>`; }).join('') +
+    `<tr class="total"><td>합계</td><td>${f0(T.lead)}</td><td>${f0(T.appl)}</td><td>${f0(T.done)}</td><td>${f1(T.conv)}</td><td>${f1(T.comp)}</td><td>${f1(T.canc)}</td></tr>`;
+  const P = D.P, ks = Object.keys(P);
+  $('prodTbl').innerHTML = `<tr><th>지표</th>${ks.map(k=>`<th>${k}</th>`).join('')}</tr>` +
+    [['건수', x=>f0(x.n)], ['집행액(원)', x=>f0(x.amt)], ['완료(건)', x=>f0(x.done)], ['완료당 비용(원)', x=>f0(x.cpa)], ['전환율', x=>f1(x.conv)], ['완료율', x=>f1(x.comp)], ['취소율', x=>f1(x.canc)]]
+    .map(([n, fn]) => `<tr><td>${n}</td>${ks.map(k=>`<td>${fn(P[k])}</td>`).join('')}</tr>`).join('');
+})();
+
+// anomalies
+$('anoms').innerHTML = D.anomalies.map(a => `<div class="anom"><span class="badge ${a.lv==='확인 필요'?'warn':'info'}">${a.lv==='확인 필요'?'⚠':'ⓘ'} ${esc(a.lv)}</span><div><h3>${esc(a.title)}</h3><p>${esc(a.body)}</p></div></div>`).join('');
+
+// region table
+$('regionTbl').innerHTML = `<tr><th>권역</th><th>확정 건수</th><th>집행액(원)</th><th>상담</th><th>접수</th><th>취소</th><th>완료</th><th>완료당 비용(원)</th><th>상담당 비용(원)</th></tr>` +
+  D.REG.map(r => { const x = D.R[r]; return `<tr><td>${r}</td><td>${f0(x.n)}</td><td>${f0(x.amt)}</td><td>${f0(x.lead)}</td><td>${f0(x.appl)}</td><td>${f0(x.cancel)}</td><td>${f0(x.done)}</td><td>${f0(x.cpa)}</td><td>${f0(x.cpl)}</td></tr>`; }).join('') +
+  `<tr class="total"><td>합계</td><td>${f0(T.n)}</td><td>${f0(T.amt)}</td><td>${f0(T.lead)}</td><td>${f0(T.appl)}</td><td>${f0(T.cancel)}</td><td>${f0(T.done)}</td><td>${f0(T.cpa)}</td><td>${f0(T.cpl)}</td></tr>`;
+
+$('foot').innerHTML = '• 원본: 03_실적데이터 영남·충청·호남(xlsx)·강원제주(csv) 400행 → 중복·이전 차수·기간 밖 제외, 미확정 보류 후 확정 368건 (정리 기준은 통합본 [참고메모] 시트)<br>' +
+  '• 완료당 비용 = 집행액 ÷ 완료 건수, 상담당 비용 = 집행액 ÷ 상담 건수. 캠페인 C01~C03은 원본 코드 그대로 표기했어요.<br>' +
+  '• 교육용 가상 자료로 만든 실습 결과물이에요. 실제 SK브로드밴드 실적이 아니에요.';
+</script>
+</body>
+</html>
