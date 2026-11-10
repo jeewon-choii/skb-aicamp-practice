@@ -7,3 +7,8 @@ __pycache__/
 
 # Office 파일을 열어 둘 때 생기는 임시 잠금 파일
 ~$*
+
+# API 키 등 비밀값 (절대 커밋하지 않음)
+.env
+.env.*
+!.env.example
