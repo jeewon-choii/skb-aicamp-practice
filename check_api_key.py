@@ -15,6 +15,9 @@ key = os.getenv("DATA_GO_KR_API_KEY", "").strip()
 
 if not key or key.startswith("여기에"):
     print("❌ DATA_GO_KR_API_KEY 가 비어 있어요. .env 파일이나 환경변수에 키를 넣어주세요.")
+elif any("가" <= ch <= "힣" for ch in key) or len(key) < 30:
+    print(f"❌ 예시 문구 같아요: {key[:4]}**** (길이 {len(key)}자)")
+    print("   실제 키는 영문·숫자로 된 긴 문자열이에요. data.go.kr 마이페이지에서 복사해 넣어주세요.")
 else:
     print(f"✅ 키를 찾았어요: {key[:4]}**** (길이 {len(key)}자)")
     if "%" in key:
