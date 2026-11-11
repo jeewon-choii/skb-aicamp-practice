@@ -116,23 +116,29 @@ def main():
         for k in keys:
             pv = prev.at[k, m] if (k in prev.index and m in prev.columns) else math.nan
             cv = curr.at[k, m] if (k in curr.index and m in curr.columns) else math.nan
-            d = cv - pv if pd.notna(pv) and pd.notna(cv) else math.nan
+            # 보고서에 보이는 값(반올림 값)끼리 빼서, 표의 증감과 독자가 직접 뺀 값이 같게 한다
+            nd = 1 if u == "%" else 0
+            if pd.notna(pv):
+                pv = round(float(pv), nd)
+            if pd.notna(cv):
+                cv = round(float(cv), nd)
+            d = round(cv - pv, nd) if pd.notna(pv) and pd.notna(cv) else math.nan
             p = (d / pv * 100) if pd.notna(d) and pv not in (0,) and u != "%" else math.nan
             rows.append((k, pv, cv, d, p))
             if pd.notna(d):
                 changes.append({"구분": k, "지표": m, "단위": u, a.prev_label: None if pd.isna(pv) else float(pv),
                                 a.curr_label: float(cv), "증감": float(d),
                                 "증감률(%)": None if pd.isna(p) else round(float(p), 1)})
-        head = [key, a.prev_label, a.curr_label, "증감", "증감률" if u != "%" else "비고"]
+        head = [key, a.prev_label, a.curr_label, "증감"] + (["증감률"] if u != "%" else [])
         md.append(f"### {m}" + (f" ({u})" if u else ""))
         md.append("| " + " | ".join(head) + " |")
         md.append("|" + "---|" * len(head))
         html.append(f"<h3>{m}" + (f" ({u})" if u else "") + "</h3>\n<table>")
         html.append("<tr>" + "".join(f"<th>{h}</th>" for h in head) + "</tr>")
         for k, pv, cv, d, p in rows:
-            cells = [k, fmt(pv, u), fmt(cv, u), fmt_diff(d, u), fmt_pct(p) if u != "%" else ""]
+            cells = [k, fmt(pv, u), fmt(cv, u), fmt_diff(d, u)] + ([fmt_pct(p)] if u != "%" else [])
             if k == TOTAL:
-                md.append("| " + " | ".join(f"**{c}**" if c else "" for c in cells) + " |")
+                md.append("| " + " | ".join(f"**{c}**" for c in cells) + " |")
                 html.append("<tr>" + "".join(f"<td><strong>{c}</strong></td>" for c in cells) + "</tr>")
             else:
                 md.append("| " + " | ".join(cells) + " |")
