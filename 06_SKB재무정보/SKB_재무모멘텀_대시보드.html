@@ -1,0 +1,234 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>SKB AI Camp · SK브로드밴드 재무 개선 모멘텀 대시보드</title>
+<style>
+:root{
+  --skb-red:#EA002C; --skb-orange:#F47725;
+  --text-primary:#202124; --text-secondary:#5F6368;
+  --bg-page:#F7F8FA; --bg-card:#FFFFFF; --border:#E5E7EB;
+  --status-good:#287D4E; --status-warn:#925000; --status-bad:#B42318;
+  --muted:#C4C7CC;
+}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg-page);color:var(--text-primary);
+  font-family:Pretendard,"Malgun Gothic","Apple SD Gothic Neo",sans-serif;line-height:1.5}
+.wrap{max-width:1180px;margin:0 auto;padding:28px 20px 48px}
+header{display:flex;flex-wrap:wrap;gap:12px 24px;align-items:flex-end;justify-content:space-between;
+  border-bottom:3px solid var(--skb-red);padding-bottom:14px;margin-bottom:20px}
+.eyebrow{font-size:13px;color:var(--skb-red);font-weight:700;letter-spacing:.02em}
+h1{margin:4px 0 2px;font-size:26px}
+.sub{color:var(--text-secondary);font-size:14px}
+.seg{display:inline-flex;border:1px solid var(--border);border-radius:8px;overflow:hidden;background:var(--bg-card)}
+.seg button{border:0;background:transparent;padding:8px 16px;font:inherit;font-size:14px;cursor:pointer;color:var(--text-secondary)}
+.seg button[aria-pressed="true"]{background:var(--skb-red);color:#fff;font-weight:700}
+.verdict{background:var(--bg-card);border:1px solid var(--border);border-left:5px solid var(--status-warn);
+  border-radius:10px;padding:16px 20px;margin-bottom:20px}
+.verdict h2{margin:0 0 6px;font-size:18px}
+.verdict p{margin:0;color:var(--text-secondary);font-size:14px}
+.kpis{display:grid;grid-template-columns:repeat(auto-fit,minmax(170px,1fr));gap:12px;margin-bottom:20px}
+.kpi{background:var(--bg-card);border:1px solid var(--border);border-radius:10px;padding:14px 16px}
+.kpi .label{font-size:13px;color:var(--text-secondary)}
+.kpi .value{font-size:26px;font-weight:700;margin:2px 0;font-variant-numeric:tabular-nums}
+.kpi .value small{font-size:14px;font-weight:400;color:var(--text-secondary);margin-left:2px}
+.badge{display:inline-flex;gap:4px;align-items:center;font-size:13px;font-weight:700;padding:2px 8px;border-radius:999px}
+.good{color:var(--status-good);background:#E8F3EC}
+.warn{color:var(--status-warn);background:#FBF1E3}
+.bad{color:var(--status-bad);background:#FCEBEA}
+.kpi .prev{font-size:12px;color:var(--text-secondary);margin-top:4px}
+.grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(340px,1fr));gap:16px;margin-bottom:20px}
+.card{background:var(--bg-card);border:1px solid var(--border);border-radius:10px;padding:16px 18px;min-width:0}
+.card h3{margin:0;font-size:16px}
+.card .desc{font-size:13px;color:var(--text-secondary);margin:2px 0 8px}
+.legend{display:flex;gap:14px;font-size:13px;color:var(--text-secondary);margin-bottom:4px}
+.legend i{display:inline-block;width:10px;height:10px;border-radius:2px;margin-right:5px;vertical-align:-1px}
+svg{display:block;width:100%;height:auto;overflow:visible}
+svg text{font-family:inherit}
+.axis{fill:var(--text-secondary);font-size:12px}
+.vlabel{fill:var(--text-primary);font-size:12px;font-weight:700}
+.grid-line{stroke:var(--border);stroke-width:1}
+table{width:100%;border-collapse:collapse;font-size:14px;font-variant-numeric:tabular-nums}
+th,td{padding:9px 10px;border-bottom:1px solid var(--border);text-align:right;white-space:nowrap}
+th:first-child,td:first-child{text-align:left}
+thead th{background:var(--bg-page);color:var(--text-secondary);font-weight:600;border-bottom:2px solid var(--skb-red)}
+.tbl{overflow-x:auto}
+.notes{font-size:12.5px;color:var(--text-secondary);margin-top:8px}
+.notes li{margin:3px 0}
+#tip{position:fixed;pointer-events:none;background:var(--text-primary);color:#fff;font-size:13px;
+  padding:8px 10px;border-radius:6px;opacity:0;transition:opacity .1s;z-index:10;max-width:240px}
+#tip b{display:block;margin-bottom:2px}
+.hit{fill:transparent;cursor:default}
+@media (max-width:520px){h1{font-size:21px}.kpi .value{font-size:22px}}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header>
+    <div>
+      <div class="eyebrow">SKB AI Camp · 공공데이터 실습</div>
+      <h1>SK브로드밴드 재무 개선 모멘텀</h1>
+      <div class="sub">2023~2025 사업연도 요약재무제표 · 단위 억원 · 기준일 각 연도 12월 31일</div>
+    </div>
+    <div class="seg" role="group" aria-label="재무제표 기준">
+      <button data-k="consolidated" aria-pressed="true">연결</button>
+      <button data-k="separate" aria-pressed="false">별도</button>
+    </div>
+  </header>
+
+  <section class="verdict" id="verdict"></section>
+  <section class="kpis" id="kpis"></section>
+
+  <section class="grid">
+    <div class="card"><h3>매출액</h3><div class="desc">외형 성장 추이 (억원)</div><div id="c-sales"></div></div>
+    <div class="card"><h3>영업이익 · 당기순이익</h3><div class="desc">이익 규모 (억원)</div>
+      <div class="legend"><span><i style="background:var(--skb-red)"></i>영업이익</span><span><i style="background:var(--skb-orange)"></i>당기순이익</span></div>
+      <div id="c-profit"></div></div>
+    <div class="card"><h3>영업이익률</h3><div class="desc">영업이익 ÷ 매출액 (%)</div><div id="c-margin"></div></div>
+    <div class="card"><h3>부채비율</h3><div class="desc">부채총계 ÷ 자본총계 (%) · 낮을수록 재무구조 안정</div><div id="c-debt"></div></div>
+  </section>
+
+  <section class="card" style="margin-bottom:20px">
+    <h3>모멘텀 점검표</h3>
+    <div class="desc">전년 대비 변화 방향으로 개선 · 둔화 · 악화를 표시해요</div>
+    <div class="tbl"><table id="score"></table></div>
+  </section>
+
+  <section class="card">
+    <h3>원본 수치</h3>
+    <div class="desc">API에서 받은 값을 억원으로 환산 (반올림)</div>
+    <div class="tbl"><table id="raw"></table></div>
+    <ul class="notes">
+      <li>출처: 공공데이터포털 「금융위원회_기업 재무정보」 API(요약재무제표), 법인등록번호 110111-1466659. 조회 결과 2023~2025년 연결 3건·별도 3건(총 6건).</li>
+      <li>회사 확인: 금융감독원 DART 기업개황(사업자등록번호 214-86-18758 일치).</li>
+      <li>이 화면은 공시 수치의 방향만 보여줘요. 이익 증감의 원인은 사업보고서·감사보고서에서 확인이 필요해요.</li>
+      <li>판정 기준: 증가율·이익률은 전년보다 오르면 개선, 부채비율은 내리면 개선. 이익이 줄었어도 흑자면 '둔화', 감소폭 20% 초과 또는 부채비율 10%p 초과 상승이면 '악화'.</li>
+    </ul>
+  </section>
+</div>
+<div id="tip" role="tooltip"></div>
+
+<script>
+const DATA = {"consolidated": {"2023": {"sales": 4274747059194, "op": 313664718250, "pretax": 258355403870, "net": 202890402212, "assets": 6473408196266, "debt": 3360165886101, "equity": 3113242310165, "capital": 2010227225000, "debtRatio": 107.9313959961}, "2024": {"sales": 4408857554877, "op": 352408995754, "pretax": 324472713921, "net": 255740271585, "assets": 6821946601782, "debt": 3795783028649, "equity": 3026163573133, "capital": 2010227225000, "debtRatio": 125.4321829246}, "2025": {"sales": 4533171234703, "op": 288820969045, "pretax": 224527289452, "net": 162946332146, "assets": 6875581409603, "debt": 4056931629253, "equity": 2818649780350, "capital": 2010227225000, "debtRatio": 143.931738435}}, "separate": {"2023": {"sales": 4281932371787, "op": 320341448648, "pretax": 264790700751, "net": 213904669580, "assets": 6442610725199, "debt": 3323155899356, "equity": 3119454825843, "capital": 2010227225000, "debtRatio": 106.5300215866}, "2024": {"sales": 4415269528572, "op": 362835064907, "pretax": 339535022886, "net": 263966557276, "assets": 6806279639763, "debt": 3760425754579, "equity": 3045853885184, "capital": 2010227225000, "debtRatio": 123.4604776306}, "2025": {"sales": 4540602863279, "op": 300587952046, "pretax": 203180847865, "net": 141488921731, "assets": 6824040946598, "debt": 4011668029867, "equity": 2812372916731, "capital": 2010227225000, "debtRatio": 142.6435308775}}};
+const YEARS = ["2023","2024","2025"];
+const EOK = 1e8;
+let K = "consolidated";
+const fmt = n => Math.round(n).toLocaleString("ko-KR");
+const pct = (n,d=1) => (n>0?"+":"") + n.toFixed(d) + "%";
+const pp  = n => (n>0?"+":"") + n.toFixed(1) + "%p";
+const tip = document.getElementById("tip");
+function showTip(e, html){tip.innerHTML=html;tip.style.opacity=1;
+  const x=Math.min(e.clientX+14, innerWidth-tip.offsetWidth-8); tip.style.left=x+"px"; tip.style.top=(e.clientY+14)+"px";}
+function hideTip(){tip.style.opacity=0}
+
+function metrics(k){
+  const d = DATA[k];
+  return YEARS.map(y => ({y, sales:d[y].sales/EOK, op:d[y].op/EOK, net:d[y].net/EOK,
+    debt:d[y].debt/EOK, equity:d[y].equity/EOK, assets:d[y].assets/EOK, pretax:d[y].pretax/EOK,
+    margin:d[y].op/d[y].sales*100, netMargin:d[y].net/d[y].sales*100, debtRatio:d[y].debt/d[y].equity*100}));
+}
+const BADGE = {good:["▲","개선"], warn:["▶","둔화"], bad:["▼","악화"]};
+const badge = s => `<span class="badge ${s}">${BADGE[s][0]} ${BADGE[s][1]}</span>`;
+function judgeGrowth(cur, prev){ const g=(cur/prev-1)*100; return g>0?"good":(g<-20?"bad":"warn"); }
+function judgeRate(cur, prev, lowerBetter=false, badGap=10){ const d=cur-prev; const better = lowerBetter? d<0 : d>0;
+  if(better) return "good"; return Math.abs(d)>badGap?"bad":"warn"; }
+
+/* ---------- bar chart (one axis, baseline 0) ---------- */
+function bars(el, series, keys, colors, names, unit){
+  const W=520,H=240,P={l:52,r:12,t:24,b:32};
+  const max = Math.max(...series.flatMap(s=>keys.map(k=>s[k])))*1.15;
+  const step = niceStep(max); const top = Math.ceil(max/step)*step;
+  const y = v => P.t + (H-P.t-P.b)*(1-v/top);
+  const gw=(W-P.l-P.r)/series.length, bw=Math.min(44,(gw-24)/keys.length);
+  let s=`<svg viewBox="0 0 ${W} ${H}" role="img" aria-label="${names.join(', ')} 연도별 막대 차트">`;
+  for(let v=0; v<=top+1e-9; v+=step){ s+=`<line class="grid-line" x1="${P.l}" x2="${W-P.r}" y1="${y(v)}" y2="${y(v)}"/><text class="axis" x="${P.l-8}" y="${y(v)+4}" text-anchor="end">${fmt(v)}</text>`; }
+  series.forEach((d,i)=>{
+    const gx=P.l+gw*i+(gw-bw*keys.length-2*(keys.length-1))/2;
+    keys.forEach((k,j)=>{
+      const x=gx+j*(bw+2), v=d[k], yy=y(v), h=y(0)-yy;
+      s+=`<path d="M${x},${y(0)} V${yy+4} Q${x},${yy} ${x+4},${yy} H${x+bw-4} Q${x+bw},${yy} ${x+bw},${yy+4} V${y(0)} Z" fill="${colors[j]}"/>`;
+      s+=`<text class="vlabel" x="${x+bw/2}" y="${yy-6}" text-anchor="middle">${fmt(v)}</text>`;
+      s+=`<rect class="hit" x="${x-4}" y="${P.t}" width="${bw+8}" height="${H-P.t-P.b}" data-tip="<b>${d.y}년 ${names[j]}</b>${fmt(v)}${unit}"/>`;
+    });
+    s+=`<text class="axis" x="${P.l+gw*i+gw/2}" y="${H-10}" text-anchor="middle">${d.y}</text>`;
+  });
+  el.innerHTML = s+`</svg>`; bindTips(el);
+}
+/* ---------- line chart ---------- */
+function line(el, series, key, color, name, unit, lo, hi){
+  const W=520,H=240,P={l:52,r:24,t:28,b:32};
+  const step=niceStep(hi-lo);
+  const y=v=>P.t+(H-P.t-P.b)*(1-(v-lo)/(hi-lo));
+  const x=i=>P.l+(W-P.l-P.r)*(i+.5)/series.length;
+  let s=`<svg viewBox="0 0 ${W} ${H}" role="img" aria-label="${name} 연도별 선 차트">`;
+  for(let v=lo; v<=hi+1e-9; v+=step){ s+=`<line class="grid-line" x1="${P.l}" x2="${W-P.r}" y1="${y(v)}" y2="${y(v)}"/><text class="axis" x="${P.l-8}" y="${y(v)+4}" text-anchor="end">${v.toFixed(0)}${unit}</text>`; }
+  s+=`<polyline fill="none" stroke="${color}" stroke-width="2" points="${series.map((d,i)=>x(i)+","+y(d[key])).join(" ")}"/>`;
+  series.forEach((d,i)=>{
+    s+=`<circle cx="${x(i)}" cy="${y(d[key])}" r="5" fill="${color}" stroke="#fff" stroke-width="2"/>`;
+    s+=`<text class="vlabel" x="${x(i)}" y="${y(d[key])-12}" text-anchor="middle">${d[key].toFixed(1)}${unit}</text>`;
+    s+=`<text class="axis" x="${x(i)}" y="${H-10}" text-anchor="middle">${d.y}</text>`;
+    s+=`<rect class="hit" x="${x(i)-40}" y="${P.t}" width="80" height="${H-P.t-P.b}" data-tip="<b>${d.y}년 ${name}</b>${d[key].toFixed(1)}${unit}"/>`;
+  });
+  el.innerHTML=s+`</svg>`; bindTips(el);
+}
+function niceStep(range){ const raw=range/4, mag=10**Math.floor(Math.log10(raw)); const n=raw/mag; return (n<=1?1:n<=2?2:n<=5?5:10)*mag; }
+function bindTips(el){ el.querySelectorAll("[data-tip]").forEach(r=>{
+  r.addEventListener("mousemove",e=>showTip(e,r.dataset.tip)); r.addEventListener("mouseleave",hideTip);}); }
+
+function render(){
+  const m = metrics(K), [a,b,c] = m;
+  const label = K==="consolidated"?"연결":"별도";
+  /* KPI */
+  const kp = [
+    ["매출액", fmt(c.sales), "억원", pct((c.sales/b.sales-1)*100), judgeGrowth(c.sales,b.sales), `2024년 ${fmt(b.sales)}억원`],
+    ["영업이익", fmt(c.op), "억원", pct((c.op/b.op-1)*100), judgeGrowth(c.op,b.op), `2024년 ${fmt(b.op)}억원`],
+    ["영업이익률", c.margin.toFixed(1), "%", pp(c.margin-b.margin), judgeRate(c.margin,b.margin,false,1.5), `2024년 ${b.margin.toFixed(1)}%`],
+    ["당기순이익", fmt(c.net), "억원", pct((c.net/b.net-1)*100), judgeGrowth(c.net,b.net), `2024년 ${fmt(b.net)}억원`],
+    ["부채비율", c.debtRatio.toFixed(1), "%", pp(c.debtRatio-b.debtRatio), judgeRate(c.debtRatio,b.debtRatio,true,10), `2024년 ${b.debtRatio.toFixed(1)}%`],
+  ];
+  document.getElementById("kpis").innerHTML = kp.map(([l,v,u,chg,s,prev])=>
+    `<div class="kpi"><div class="label">2025년 ${l}</div><div class="value">${v}<small>${u}</small></div>
+     ${badge(s)} <span style="font-size:13px;color:var(--text-secondary)">전년 대비 ${chg}</span>
+     <div class="prev">${prev}</div></div>`).join("");
+  /* verdict */
+  const goods = kp.filter(k=>k[4]==="good").length;
+  document.getElementById("verdict").innerHTML =
+    `<h2>2025년 모멘텀: 외형은 성장, 수익성·재무구조는 약해졌어요 (${label} 기준)</h2>
+     <p>5개 지표 중 ${goods}개 개선. 매출은 2년 연속 늘었지만(${pct((b.sales/a.sales-1)*100)} → ${pct((c.sales/b.sales-1)*100)}),
+     영업이익은 2024년 ${pct((b.op/a.op-1)*100)}에서 2025년 ${pct((c.op/b.op-1)*100)}로 돌아섰고,
+     부채비율은 ${a.debtRatio.toFixed(1)}% → ${c.debtRatio.toFixed(1)}%로 2년 연속 올랐어요.
+     개선 신호는 2024년에 있었고 2025년에는 이어지지 않았어요.</p>`;
+  /* charts */
+  bars(document.getElementById("c-sales"), m, ["sales"], ["var(--skb-red)"], ["매출액"], "억원");
+  bars(document.getElementById("c-profit"), m, ["op","net"], ["var(--skb-red)","var(--skb-orange)"], ["영업이익","당기순이익"], "억원");
+  const mlo=Math.floor(Math.min(...m.map(d=>d.margin))-2), mhi=Math.ceil(Math.max(...m.map(d=>d.margin))+2);
+  line(document.getElementById("c-margin"), m, "margin", "var(--skb-red)", "영업이익률", "%", Math.max(0,mlo-mlo%2), mhi+mhi%2);
+  line(document.getElementById("c-debt"), m, "debtRatio", "var(--skb-red)", "부채비율", "%", 80, 160);
+  /* scorecard */
+  const rows = [
+    ["매출액 증가율", (b.sales/a.sales-1)*100, (c.sales/b.sales-1)*100, judgeGrowth(b.sales,a.sales), judgeGrowth(c.sales,b.sales), "%"],
+    ["영업이익 증가율", (b.op/a.op-1)*100, (c.op/b.op-1)*100, judgeGrowth(b.op,a.op), judgeGrowth(c.op,b.op), "%"],
+    ["당기순이익 증가율", (b.net/a.net-1)*100, (c.net/b.net-1)*100, judgeGrowth(b.net,a.net), judgeGrowth(c.net,b.net), "%"],
+    ["영업이익률 변화", b.margin-a.margin, c.margin-b.margin, judgeRate(b.margin,a.margin,false,1.5), judgeRate(c.margin,b.margin,false,1.5), "%p"],
+    ["부채비율 변화", b.debtRatio-a.debtRatio, c.debtRatio-b.debtRatio, judgeRate(b.debtRatio,a.debtRatio,true,10), judgeRate(c.debtRatio,b.debtRatio,true,10), "%p"],
+  ];
+  const sg = (v,u)=> (v>0?"+":"")+v.toFixed(1)+u;
+  document.getElementById("score").innerHTML =
+    `<thead><tr><th>지표</th><th>2024 (전년 대비)</th><th>판정</th><th>2025 (전년 대비)</th><th>판정</th></tr></thead><tbody>`+
+    rows.map(r=>`<tr><td>${r[0]}</td><td>${sg(r[1],r[5])}</td><td>${badge(r[3])}</td><td>${sg(r[2],r[5])}</td><td>${badge(r[4])}</td></tr>`).join("")+`</tbody>`;
+  /* raw table */
+  const items=[["매출액","sales"],["영업이익","op"],["법인세차감전이익","pretax"],["당기순이익","net"],["자산총계","assets"],["부채총계","debt"],["자본총계","equity"]];
+  document.getElementById("raw").innerHTML =
+    `<thead><tr><th>항목 (억원, ${label})</th>${YEARS.map(y=>`<th>${y}</th>`).join("")}</tr></thead><tbody>`+
+    items.map(([n,k])=>`<tr><td>${n}</td>${m.map(d=>`<td>${fmt(d[k])}</td>`).join("")}</tr>`).join("")+
+    `<tr><td>영업이익률</td>${m.map(d=>`<td>${d.margin.toFixed(1)}%</td>`).join("")}</tr>`+
+    `<tr><td>부채비율</td>${m.map(d=>`<td>${d.debtRatio.toFixed(1)}%</td>`).join("")}</tr></tbody>`;
+}
+document.querySelectorAll(".seg button").forEach(btn=>btn.addEventListener("click",()=>{
+  K=btn.dataset.k; document.querySelectorAll(".seg button").forEach(b=>b.setAttribute("aria-pressed", b===btn)); render();
+}));
+render();
+</script>
+</body>
+</html>
