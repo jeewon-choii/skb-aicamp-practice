@@ -1,0 +1,256 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>SKB AI Camp · SK 계열사 재무 개선 모멘텀 대시보드</title>
+<style>
+:root{
+  --skb-red:#EA002C; --skb-orange:#F47725;
+  --text-primary:#202124; --text-secondary:#5F6368;
+  --bg-page:#F7F8FA; --bg-card:#FFFFFF; --border:#E5E7EB;
+  --status-good:#287D4E; --status-warn:#925000; --status-bad:#B42318;
+}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg-page);color:var(--text-primary);
+  font-family:Pretendard,"Malgun Gothic","Apple SD Gothic Neo",sans-serif;line-height:1.5}
+.wrap{max-width:1240px;margin:0 auto;padding:28px 20px 48px}
+header{border-bottom:3px solid var(--skb-red);padding-bottom:14px;margin-bottom:20px}
+.eyebrow{font-size:13px;color:var(--skb-red);font-weight:700}
+h1{margin:4px 0 2px;font-size:26px}
+.sub{color:var(--text-secondary);font-size:14px}
+.kpis{display:grid;grid-template-columns:repeat(auto-fit,minmax(170px,1fr));gap:12px;margin-bottom:20px}
+.kpi{background:var(--bg-card);border:1px solid var(--border);border-radius:10px;padding:14px 16px}
+.kpi .label{font-size:13px;color:var(--text-secondary)}
+.kpi .value{font-size:28px;font-weight:700;font-variant-numeric:tabular-nums}
+.kpi .value small{font-size:14px;font-weight:400;color:var(--text-secondary);margin-left:2px}
+.kpi .hint{font-size:12px;color:var(--text-secondary)}
+.kpi.good{border-top:4px solid var(--status-good)} .kpi.warn{border-top:4px solid var(--status-warn)} .kpi.bad{border-top:4px solid var(--status-bad)}
+.badge{display:inline-flex;gap:4px;align-items:center;font-size:12.5px;font-weight:700;padding:2px 8px;border-radius:999px;white-space:nowrap}
+.b-good{color:var(--status-good);background:#E8F3EC}
+.b-warn{color:var(--status-warn);background:#FBF1E3}
+.b-bad{color:var(--status-bad);background:#FCEBEA}
+.b-na{color:var(--text-secondary);background:#EEF0F2}
+.filters{display:flex;flex-wrap:wrap;gap:8px;align-items:center;margin-bottom:14px}
+.filters span{font-size:13px;color:var(--text-secondary);margin-right:4px}
+.chip{border:1px solid var(--border);background:var(--bg-card);border-radius:999px;padding:6px 14px;font:inherit;font-size:13px;cursor:pointer;color:var(--text-secondary)}
+.chip[aria-pressed="true"]{border-color:var(--skb-red);color:var(--skb-red);font-weight:700;background:#FFF3F5}
+.layout{display:grid;grid-template-columns:minmax(0,1.35fr) minmax(0,1fr);gap:16px;margin-bottom:20px}
+@media (max-width:960px){.layout{grid-template-columns:1fr}}
+.card{background:var(--bg-card);border:1px solid var(--border);border-radius:10px;padding:16px 18px;min-width:0}
+.card h3{margin:0;font-size:16px}
+.card .desc{font-size:13px;color:var(--text-secondary);margin:2px 0 10px}
+.rank{width:100%;border-collapse:collapse;font-size:13.5px}
+.rank td{padding:6px 6px;border-bottom:1px solid var(--border);vertical-align:middle}
+.rank tr{cursor:pointer}
+.rank tr:hover td,.rank tr.sel td{background:#FFF6F7}
+.rank .nm{white-space:nowrap;font-weight:600}
+.rank .sec{font-size:12px;color:var(--text-secondary);white-space:nowrap}
+.bar{position:relative;height:14px;background:#F1F2F4;border-radius:4px;min-width:90px}
+.bar i{position:absolute;left:0;top:0;bottom:0;border-radius:4px}
+.dots{display:flex;gap:3px}
+.dots b{width:20px;height:20px;border-radius:4px;font-size:11px;display:flex;align-items:center;justify-content:center;font-weight:700}
+.dots .y{background:#E8F3EC;color:var(--status-good)} .dots .n{background:#F1F2F4;color:#9AA0A6}
+.trend{font-size:12.5px;white-space:nowrap;color:var(--text-secondary)}
+.legend-row{display:flex;flex-wrap:wrap;gap:12px;font-size:12px;color:var(--text-secondary);margin-bottom:8px}
+.detail h2{margin:0;font-size:20px}
+.detail .meta{font-size:12.5px;color:var(--text-secondary);margin:2px 0 12px}
+.checks{display:grid;grid-template-columns:1fr 1fr;gap:6px;margin:10px 0 14px;font-size:13px}
+.checks div{padding:6px 10px;border-radius:6px;background:var(--bg-page)}
+svg{display:block;width:100%;height:auto;overflow:visible}
+svg text{font-family:inherit}
+.axis{fill:var(--text-secondary);font-size:12px}
+.vlabel{fill:var(--text-primary);font-size:12px;font-weight:700}
+.grid-line{stroke:var(--border)}
+.zero{stroke:#9AA0A6}
+table.data{width:100%;border-collapse:collapse;font-size:13px;font-variant-numeric:tabular-nums}
+table.data th,table.data td{padding:8px 8px;border-bottom:1px solid var(--border);text-align:right;white-space:nowrap}
+table.data th:first-child,table.data td:first-child,table.data th:nth-child(2),table.data td:nth-child(2){text-align:left}
+table.data thead th{background:var(--bg-page);color:var(--text-secondary);font-weight:600;border-bottom:2px solid var(--skb-red);position:sticky;top:0}
+.tbl{overflow-x:auto}
+.neg{color:var(--status-bad)}
+.notes{font-size:12.5px;color:var(--text-secondary);margin:10px 0 0;padding-left:18px}
+.notes li{margin:3px 0}
+#tip{position:fixed;pointer-events:none;background:var(--text-primary);color:#fff;font-size:13px;padding:8px 10px;border-radius:6px;opacity:0;z-index:10;max-width:260px}
+.hit{fill:transparent}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header>
+    <div class="eyebrow">SKB AI Camp · 공공데이터 실습</div>
+    <h1>SK 계열사 재무 개선 모멘텀</h1>
+    <div class="sub">주요 계열사 <span id="nComp"></span>곳 · 2025 사업연도 vs 2024 (요약재무제표, 연결 우선) · 금액 단위 억원</div>
+  </header>
+
+  <section class="kpis" id="kpis"></section>
+
+  <div class="filters" id="filters"><span>사업군</span></div>
+
+  <section class="layout">
+    <div class="card">
+      <h3>모멘텀 점수 순위 (5점 만점)</h3>
+      <div class="desc">전년 대비 5개 지표 중 좋아진 개수. 행을 누르면 오른쪽에 상세가 나와요.</div>
+      <div class="legend-row">
+        <span>점검 항목: <b>매</b> 매출 증가 · <b>영</b> 영업이익 증가 · <b>률</b> 영업이익률 상승 · <b>순</b> 순이익 증가 · <b>부</b> 부채비율 하락</span>
+      </div>
+      <table class="rank" id="rank"></table>
+    </div>
+    <div class="card detail" id="detail"></div>
+  </section>
+
+  <section class="card" style="margin-bottom:20px">
+    <h3>사업군별 평균 모멘텀 점수</h3>
+    <div class="desc">2024년(전년 대비)과 2025년(전년 대비) 비교 · 2025 데이터가 없는 회사는 제외</div>
+    <div id="sectorChart"></div>
+  </section>
+
+  <section class="card">
+    <h3>전체 수치표</h3>
+    <div class="desc">최근 연도 기준 · 증감은 전년 대비 · 억원 미만 반올림</div>
+    <div class="tbl"><table class="data" id="table"></table></div>
+    <ul class="notes" id="notes"></ul>
+  </section>
+</div>
+<div id="tip" role="tooltip"></div>
+
+<script>
+const G = {"companies": [{"name": "SK㈜", "crno": "110111-0769583", "bizno": "220-81-16503", "market": "유가증권시장", "industry": "지주회사", "sector": "지주", "basis": "연결", "years": {"2023": {"sales": 1312378.78, "op": 50563.78, "net": -4063.87, "assets": 2069702.64, "debt": 1290912.14, "equity": 778790.5, "margin": 3.852834316629228, "debtRatio": 165.75858847790258, "apiDebtRatio": 165.7585884779}, "2024": {"sales": 1246904.39, "op": 23552.9, "net": 5288.1, "assets": 2149777.54, "debt": 1346902.18, "equity": 802875.36, "margin": 1.88890986260783, "debtRatio": 167.75981019021432, "apiDebtRatio": 167.7598101902}, "2025": {"sales": 1227033.38, "op": 18184.76, "net": 35552.46, "assets": 2135196.68, "debt": 1278283.33, "equity": 856913.35, "margin": 1.4820102123057157, "debtRatio": 149.1729974798502, "apiDebtRatio": 149.1729974799}}, "scores": {"2024": {"score": 1, "checks": {"매출 증가": false, "영업이익 증가": false, "영업이익률 상승": false, "순이익 증가": true, "부채비율 하락": false}}, "2025": {"score": 2, "checks": {"매출 증가": false, "영업이익 증가": false, "영업이익률 상승": false, "순이익 증가": true, "부채비율 하락": true}}}, "latest": "2025", "records": 6}, {"name": "SK스퀘어", "crno": "110111-8077821", "bizno": "540-81-02301", "market": "유가증권시장", "industry": "지주회사", "sector": "지주", "basis": "연결", "years": {"2023": {"sales": 22765.08, "op": -23396.98, "net": -13148.34, "assets": 179700.08, "debt": 21534.91, "equity": 158165.17, "margin": -102.77574249684164, "debtRatio": 13.615456550895496, "apiDebtRatio": 13.6154565509}, "2024": {"sales": 19066.11, "op": 39125.83, "net": 36505.15, "assets": 219210.51, "debt": 23356.36, "equity": 195854.15, "margin": 205.21139340956282, "debtRatio": 11.92538427191867, "apiDebtRatio": 11.9253842719}, "2025": {"sales": 14115.21, "op": 87974.21, "net": 88186.95, "assets": 305045.46, "debt": 25213.83, "equity": 279831.63, "margin": 623.258244121058, "debtRatio": 9.010357406702022, "apiDebtRatio": 9.0103574067}}, "scores": {"2024": {"score": 4, "checks": {"매출 증가": false, "영업이익 증가": true, "영업이익률 상승": true, "순이익 증가": true, "부채비율 하락": true}}, "2025": {"score": 4, "checks": {"매출 증가": false, "영업이익 증가": true, "영업이익률 상승": true, "순이익 증가": true, "부채비율 하락": true}}}, "latest": "2025", "records": 6}, {"name": "SK디스커버리", "crno": "130111-0005727", "bizno": "135-81-01191", "market": "유가증권시장", "industry": "지주회사", "sector": "지주", "basis": "연결", "years": {"2023": {"sales": 89392.16850779, "op": 2567.02034546, "net": 2478.22243607, "assets": 122507.10294978, "debt": 61811.38047283, "equity": 60695.72247695, "margin": 2.871638968279754, "debtRatio": 101.83811634551955, "apiDebtRatio": 101.8381163455}, "2024": {"sales": 90396.02889123, "op": 1725.57836004, "net": 319.19087418, "assets": 150776.92130416, "debt": 86243.37888533, "equity": 64533.54241883, "margin": 1.9089094744596808, "debtRatio": 133.64116652019612, "apiDebtRatio": 133.6411665202}, "2025": {"sales": 101640.13989611, "op": 3613.53559282, "net": 1446.26599785, "assets": 162996.59050645, "debt": 94484.13351329, "equity": 68512.45699316, "margin": 3.5552249303410277, "debtRatio": 137.90796252238172, "apiDebtRatio": 137.9079625224}}, "scores": {"2024": {"score": 1, "checks": {"매출 증가": true, "영업이익 증가": false, "영업이익률 상승": false, "순이익 증가": false, "부채비율 하락": false}}, "2025": {"score": 4, "checks": {"매출 증가": true, "영업이익 증가": true, "영업이익률 상승": true, "순이익 증가": true, "부채비율 하락": false}}}, "latest": "2025", "records": 6}, {"name": "SK이노베이션", "crno": "110111-3710385", "bizno": "101-86-32319", "market": "유가증권시장", "industry": "석유 정제품 제조업", "sector": "에너지·화학", "basis": "연결", "years": {"2023": {"sales": 772884.85864, "op": 19038.8632, "net": 5548.94277, "assets": 808355.13251, "debt": 508155.45738, "equity": 300199.67513, "margin": 2.463350522030095, "debtRatio": 169.2724874402165, "apiDebtRatio": 169.2724874402}, "2024": {"sales": 747169.70174, "op": 3154.88338, "net": -23724.82956, "assets": 1105300.97549, "debt": 708811.88555, "equity": 396489.08994, "margin": 0.42224455470463335, "debtRatio": 178.77210332755013, "apiDebtRatio": 178.7721033276}, "2025": {"sales": 802960.54243, "op": 4486.83859, "net": -54364.41431, "assets": 1056084.81396, "debt": 692169.8565, "equity": 363914.95746, "margin": 0.558786933218596, "debtRatio": 190.20099127859572, "apiDebtRatio": 190.2009912786}}, "scores": {"2024": {"score": 0, "checks": {"매출 증가": false, "영업이익 증가": false, "영업이익률 상승": false, "순이익 증가": false, "부채비율 하락": false}}, "2025": {"score": 3, "checks": {"매출 증가": true, "영업이익 증가": true, "영업이익률 상승": true, "순이익 증가": false, "부채비율 하락": false}}}, "latest": "2025", "records": 6}, {"name": "SK에너지", "crno": "110111-4505967", "bizno": "101-86-60120", "market": "기타법인", "industry": "원유 정제처리업", "sector": "에너지·화학", "basis": "연결", "years": {"2023": {"sales": 436254.64878, "op": 4092.19373, "net": 1550.52386, "assets": 192956.63912, "debt": 146122.34956, "equity": 46834.28956, "margin": 0.9380286815152458, "debtRatio": 311.9986465745377, "apiDebtRatio": 311.9986465745}, "2024": {"sales": 434194.39257, "op": 537.59889, "net": -4625.49181, "assets": 173316.11105, "debt": 130752.35477, "equity": 42563.75628, "margin": 0.12381525399670593, "debtRatio": 307.1917664170969, "apiDebtRatio": 307.1917664171}, "2025": {"sales": 392880.74349, "op": -1717.21749, "net": -1633.68232, "assets": 164427.89506, "debt": 117482.75469, "equity": 46945.14037, "margin": -0.4370836490345087, "debtRatio": 250.255412517792, "apiDebtRatio": 250.2554125178}}, "scores": {"2024": {"score": 1, "checks": {"매출 증가": false, "영업이익 증가": false, "영업이익률 상승": false, "순이익 증가": false, "부채비율 하락": true}}, "2025": {"score": 2, "checks": {"매출 증가": false, "영업이익 증가": false, "영업이익률 상승": false, "순이익 증가": true, "부채비율 하락": true}}}, "latest": "2025", "records": 6}, {"name": "SK지오센트릭", "crno": "110111-4505975", "bizno": "101-86-60116", "market": "기타법인", "industry": "석유화학계 기초 화학물질 제조업", "sector": "에너지·화학", "basis": "연결", "years": {"2023": {"sales": 135483.68783, "op": 1937.0949, "net": 86.3856, "assets": 80154.61374, "debt": 43176.02063, "equity": 36978.59311, "margin": 1.4297624540827352, "debtRatio": 116.75950056175624, "apiDebtRatio": 116.7595005618}, "2024": {"sales": 131935.44959, "op": -676.58594, "net": -3885.52084, "assets": 83269.57658, "debt": 47601.65568, "equity": 35667.9209, "margin": -0.5128158823898695, "debtRatio": 133.45789291576006, "apiDebtRatio": 133.4578929158}, "2025": {"sales": 115013.81588, "op": -1483.94633, "net": -8707.14735, "assets": 76083.76284, "debt": 48826.01123, "equity": 27257.75161, "margin": -1.2902331069062867, "debtRatio": 179.12706788364486, "apiDebtRatio": 179.1270678836}}, "scores": {"2024": {"score": 0, "checks": {"매출 증가": false, "영업이익 증가": false, "영업이익률 상승": false, "순이익 증가": false, "부채비율 하락": false}}, "2025": {"score": 0, "checks": {"매출 증가": false, "영업이익 증가": false, "영업이익률 상승": false, "순이익 증가": false, "부채비율 하락": false}}}, "latest": "2025", "records": 6}, {"name": "SK엔무브", "crno": "110111-4191815", "bizno": "101-86-49595", "market": "기타법인", "industry": "석유 정제품 제조업", "sector": "에너지·화학", "basis": "연결", "years": {"2023": {"sales": 57795.62469, "op": 9995.39172, "net": 6676.67265, "assets": 42656.60026, "debt": 23926.23728, "equity": 18730.36298, "margin": 17.294374398775965, "debtRatio": 127.74038231692614, "apiDebtRatio": 127.7403823169}, "2024": {"sales": 50947.13202, "op": 6875.7217, "net": 4348.14543, "assets": 37884.5477, "debt": 20436.06526, "equity": 17448.48244, "margin": 13.495797363629498, "debtRatio": 117.12230751455542, "apiDebtRatio": 117.1223075146}}, "scores": {"2024": {"score": 1, "checks": {"매출 증가": false, "영업이익 증가": false, "영업이익률 상승": false, "순이익 증가": false, "부채비율 하락": true}}}, "latest": "2024", "records": 4}, {"name": "SK인천석유화학", "crno": "120111-0666464", "bizno": "137-86-33904", "market": "기타법인", "industry": "원유 정제처리업", "sector": "에너지·화학", "basis": "별도", "years": {"2023": {"sales": 101165.35044, "op": 1016.15063, "net": -720.41666, "assets": 57231.99109, "debt": 41178.63253, "equity": 16053.35856, "margin": 1.0044453220202774, "debtRatio": 256.5110121728945, "apiDebtRatio": 256.5110121729}, "2024": {"sales": 107283.79214, "op": 280.83955, "net": -1131.50731, "assets": 55889.77413, "debt": 42792.89355, "equity": 13096.88058, "margin": 0.26177257943447635, "debtRatio": 326.7411143333491, "apiDebtRatio": 326.7411143333}, "2025": {"sales": 93819.61604, "op": -1487.23417, "net": -1588.53996, "assets": 72929.72568, "debt": 44085.9442, "equity": 28843.78148, "margin": -1.585205986524095, "debtRatio": 152.84384341411257, "apiDebtRatio": 152.8438434141}}, "scores": {"2024": {"score": 1, "checks": {"매출 증가": true, "영업이익 증가": false, "영업이익률 상승": false, "순이익 증가": false, "부채비율 하락": false}}, "2025": {"score": 1, "checks": {"매출 증가": false, "영업이익 증가": false, "영업이익률 상승": false, "순이익 증가": false, "부채비율 하락": true}}}, "latest": "2025", "records": 5}, {"name": "SK가스", "crno": "110111-0413247", "bizno": "116-81-12528", "market": "유가증권시장", "industry": "기체연료 및 관련제품 도매업", "sector": "에너지·화학", "basis": "연결", "years": {"2023": {"sales": 69922.57390856, "op": 3035.9546873, "net": 3162.90608462, "assets": 60818.11411173, "debt": 34935.05643672, "equity": 25883.05767501, "margin": 4.341880622515721, "debtRatio": 134.97267933088784, "apiDebtRatio": 134.9726793309}, "2024": {"sales": 70959.02060317, "op": 2871.76575159, "net": 1777.68044603, "assets": 75396.21970135, "debt": 48012.85742388, "equity": 27383.36227747, "margin": 4.047076364892369, "debtRatio": 175.3358734306458, "apiDebtRatio": 175.3358734306}, "2025": {"sales": 76763.18981997, "op": 4428.31411929, "net": 2338.18515354, "assets": 80318.85593897, "debt": 48873.36598401, "equity": 31445.48995496, "margin": 5.7687989903436385, "debtRatio": 155.42249796079594, "apiDebtRatio": 155.4224979608}}, "scores": {"2024": {"score": 1, "checks": {"매출 증가": true, "영업이익 증가": false, "영업이익률 상승": false, "순이익 증가": false, "부채비율 하락": false}}, "2025": {"score": 5, "checks": {"매출 증가": true, "영업이익 증가": true, "영업이익률 상승": true, "순이익 증가": true, "부채비율 하락": true}}}, "latest": "2025", "records": 6}, {"name": "SKC", "crno": "130111-0001585", "bizno": "135-81-01250", "market": "유가증권시장", "industry": "기타 화학제품 제조업", "sector": "에너지·화학", "basis": "연결", "years": {"2023": {"sales": 15707.51580937, "op": -2163.00854733, "net": -3263.60017026, "assets": 70323.22131682, "debt": 45078.97882742, "equity": 25244.2424894, "margin": -13.770532359036055, "debtRatio": 178.5713270911122, "apiDebtRatio": 178.5713270911}, "2024": {"sales": 17215.64345604, "op": -2768.32854584, "net": -4550.55541599, "assets": 67486.78536179, "debt": 44559.45828201, "equity": 22927.32707978, "margin": -16.080308313243727, "debtRatio": 194.35086404514962, "apiDebtRatio": 194.3508640451}, "2025": {"sales": 18400.36441822, "op": -3050.25449873, "net": -7193.60650768, "assets": 67404.99643049, "debt": 47147.65214368, "equity": 20257.34428681, "margin": -16.577141785896615, "debtRatio": 232.74350021477824, "apiDebtRatio": 232.7435002148}}, "scores": {"2024": {"score": 1, "checks": {"매출 증가": true, "영업이익 증가": false, "영업이익률 상승": false, "순이익 증가": false, "부채비율 하락": false}}, "2025": {"score": 1, "checks": {"매출 증가": true, "영업이익 증가": false, "영업이익률 상승": false, "순이익 증가": false, "부채비율 하락": false}}}, "latest": "2025", "records": 6}, {"name": "SK케미칼", "crno": "131111-0501021", "bizno": "846-81-00915", "market": "유가증권시장", "industry": "합성수지 및 기타 플라스틱 물질 제조업", "sector": "에너지·화학", "basis": "연결", "years": {"2023": {"sales": 17487.77740387, "op": 833.02487079, "net": 478.37893778, "assets": 41587.74903691, "debt": 14830.00847844, "equity": 26757.74055847, "margin": 4.763469087876506, "debtRatio": 55.423246391204174, "apiDebtRatio": 55.4232463912}, "2024": {"sales": 17367.78902011, "op": -451.75568334, "net": -43.64733944, "assets": 53670.48627339, "debt": 23340.82396873, "equity": 30329.66230466, "margin": -2.6011122245722604, "debtRatio": 76.95708489686612, "apiDebtRatio": 76.9570848969}, "2025": {"sales": 23651.64441719, "op": -2.07363696, "net": 272.97323639, "assets": 60876.2438052, "debt": 29471.85327552, "equity": 31404.39052968, "margin": -0.008767411362285161, "debtRatio": 93.84628320573974, "apiDebtRatio": 93.8462832057}}, "scores": {"2024": {"score": 0, "checks": {"매출 증가": false, "영업이익 증가": false, "영업이익률 상승": false, "순이익 증가": false, "부채비율 하락": false}}, "2025": {"score": 4, "checks": {"매출 증가": true, "영업이익 증가": true, "영업이익률 상승": true, "순이익 증가": true, "부채비율 하락": false}}}, "latest": "2025", "records": 6}, {"name": "SK온", "crno": "110111-8042379", "bizno": "242-87-02258", "market": "기타법인", "industry": "운송장비용 이차전지 제조업", "sector": "배터리·소재", "basis": "연결", "years": {"2023": {"sales": 128972.12418, "op": -5818.24145, "net": -7481.36534, "assets": 332507.17322, "debt": 217842.11522, "equity": 114665.058, "margin": -4.511239531016616, "debtRatio": 189.98125411491964, "apiDebtRatio": 189.9812541149}, "2024": {"sales": 140347.41024, "op": -10865.62303, "net": -20616.85204, "assets": 483741.8696, "debt": 321698.23106, "equity": 162043.63854, "margin": -7.741947650775548, "debtRatio": 198.52567737831296, "apiDebtRatio": 198.5256773783}, "2025": {"sales": 567476.11548, "op": -2737.40603, "net": -53646.67636, "assets": 493139.86363, "debt": 348806.23954, "equity": 144333.62409, "margin": -0.4823825981970296, "debtRatio": 241.66665372616154, "apiDebtRatio": 241.6666537262}}, "scores": {"2024": {"score": 1, "checks": {"매출 증가": true, "영업이익 증가": false, "영업이익률 상승": false, "순이익 증가": false, "부채비율 하락": false}}, "2025": {"score": 3, "checks": {"매출 증가": true, "영업이익 증가": true, "영업이익률 상승": true, "순이익 증가": false, "부채비율 하락": false}}}, "latest": "2025", "records": 6}, {"name": "SK아이이테크놀로지", "crno": "110111-7064217", "bizno": "559-86-01539", "market": "유가증권시장", "industry": "일차전지 및 이차전지 제조업", "sector": "배터리·소재", "basis": "연결", "years": {"2023": {"sales": 6495.68305, "op": 320.2792, "net": 821.58002, "assets": 40838.15083, "debt": 16721.54317, "equity": 24116.60766, "margin": 4.9306469779186655, "debtRatio": 69.33621596263924, "apiDebtRatio": 69.3362159626}, "2024": {"sales": 2178.64619, "op": -2909.94179, "net": -2466.15236, "assets": 41501.38152, "debt": 18255.81137, "equity": 23245.57015, "margin": -133.56651499250552, "debtRatio": 78.53458208251347, "apiDebtRatio": 78.5345820825}, "2025": {"sales": 2618.74278, "op": -2463.64302, "net": -2114.17928, "assets": 43918.60994, "debt": 17904.15728, "equity": 26014.45266, "margin": -94.07731980458195, "debtRatio": 68.82388614514097, "apiDebtRatio": 68.8238861451}}, "scores": {"2024": {"score": 0, "checks": {"매출 증가": false, "영업이익 증가": false, "영업이익률 상승": false, "순이익 증가": false, "부채비율 하락": false}}, "2025": {"score": 5, "checks": {"매출 증가": true, "영업이익 증가": true, "영업이익률 상승": true, "순이익 증가": true, "부채비율 하락": true}}}, "latest": "2025", "records": 6}, {"name": "SK시그넷", "crno": "205811-0018148", "bizno": "367-88-00497", "market": "코넥스시장", "industry": "전동기, 발전기 및 전기 변환장치 제조업", "sector": "배터리·소재", "basis": "별도", "years": {"2023": {"sales": 511.38956, "op": -1436.19516, "net": -1296.77022, "assets": 2938.81556, "debt": 1563.84003, "equity": 1374.97553, "margin": -280.8417050985554, "debtRatio": 113.73584444808264, "apiDebtRatio": 113.735844448}, "2024": {"sales": 744.01016, "op": -2451.59821, "net": -2465.54897, "assets": 2306.42631, "debt": 3357.08768, "equity": -1050.66137, "margin": -329.5113886616817, "debtRatio": null, "apiDebtRatio": -319.5213772825}}, "scores": {"2024": {"score": 1, "checks": {"매출 증가": true, "영업이익 증가": false, "영업이익률 상승": false, "순이익 증가": false, "부채비율 하락": false}}}, "latest": "2024", "records": 2}, {"name": "SK하이닉스", "crno": "134411-0001387", "bizno": "126-81-03725", "market": "유가증권시장", "industry": "반도체소자 제조업", "sector": "반도체", "basis": "연결", "years": {"2023": {"sales": 327657.19, "op": -77303.13, "net": -91375.47, "assets": 1003301.65, "debt": 468264.13, "equity": 535037.52, "margin": -23.592685391704666, "debtRatio": 87.5198677655354, "apiDebtRatio": 87.5198677655}, "2024": {"sales": 661929.6, "op": 234673.19, "net": 197969.02, "assets": 1198552.09, "debt": 459395.05, "equity": 739157.04, "margin": 35.452892573470045, "debtRatio": 62.15121079006431, "apiDebtRatio": 62.1512107901}, "2025": {"sales": 971466.75, "op": 472063.19, "net": 429479.02, "assets": 1761076.59, "debt": 554409.08, "equity": 1206667.51, "margin": 48.59283037736495, "debtRatio": 45.94547175634156, "apiDebtRatio": 45.9454717563}}, "scores": {"2024": {"score": 5, "checks": {"매출 증가": true, "영업이익 증가": true, "영업이익률 상승": true, "순이익 증가": true, "부채비율 하락": true}}, "2025": {"score": 5, "checks": {"매출 증가": true, "영업이익 증가": true, "영업이익률 상승": true, "순이익 증가": true, "부채비율 하락": true}}}, "latest": "2025", "records": 6}, {"name": "SK실트론", "crno": "175311-0001348", "bizno": "513-81-02110", "market": "기타법인", "industry": "반도체소자 제조업", "sector": "반도체", "basis": "연결", "years": {"2023": {"sales": 20255.90278, "op": 2806.2811, "net": 2339.91597, "assets": 54515.62679, "debt": 34981.52575, "equity": 19534.10104, "margin": 13.854139854831985, "debtRatio": 179.0792710571543, "apiDebtRatio": 179.0792710572}, "2024": {"sales": 21268.12964, "op": 3155.22998, "net": 2480.48989, "assets": 61787.84809, "debt": 39355.52907, "equity": 22432.31902, "margin": 14.835484047764155, "debtRatio": 175.44119729623924, "apiDebtRatio": 175.4411972962}, "2025": {"sales": 20574.85935, "op": 1931.04307, "net": -2936.20586, "assets": 55948.10389, "debt": 36613.79237, "equity": 19334.31152, "margin": 9.385449675018071, "debtRatio": 189.37210322759918, "apiDebtRatio": 189.3721032276}}, "scores": {"2024": {"score": 5, "checks": {"매출 증가": true, "영업이익 증가": true, "영업이익률 상승": true, "순이익 증가": true, "부채비율 하락": true}}, "2025": {"score": 0, "checks": {"매출 증가": false, "영업이익 증가": false, "영업이익률 상승": false, "순이익 증가": false, "부채비율 하락": false}}}, "latest": "2025", "records": 6}, {"name": "SK텔레콤", "crno": "110111-0371346", "bizno": "104-81-37225", "market": "유가증권시장", "industry": "무선 및 위성 통신업", "sector": "ICT", "basis": "연결", "years": {"2023": {"sales": 176085.11, "op": 17532.04, "net": 11459.37, "assets": 301192.27, "debt": 178908.28, "equity": 122283.99, "margin": 9.956571569282605, "debtRatio": 146.30556297680505, "apiDebtRatio": 146.3055629768}, "2024": {"sales": 179406.09, "op": 18234.09, "net": 13870.95, "assets": 305152.55, "debt": 186876.21, "equity": 118276.34, "margin": 10.163584747875616, "debtRatio": 157.9996557215078, "apiDebtRatio": 157.9996557215}, "2025": {"sales": 170992.13, "op": 10732.15, "net": 3750.84, "assets": 301077.83, "debt": 171524.91, "equity": 129552.92, "margin": 6.276399972326212, "debtRatio": 132.39756386810888, "apiDebtRatio": 132.3975638681}}, "scores": {"2024": {"score": 4, "checks": {"매출 증가": true, "영업이익 증가": true, "영업이익률 상승": true, "순이익 증가": true, "부채비율 하락": false}}, "2025": {"score": 1, "checks": {"매출 증가": false, "영업이익 증가": false, "영업이익률 상승": false, "순이익 증가": false, "부채비율 하락": true}}}, "latest": "2025", "records": 6}, {"name": "SK브로드밴드", "crno": "110111-1466659", "bizno": "214-86-18758", "market": "기타법인", "industry": "유선 통신업", "sector": "ICT", "basis": "연결", "years": {"2023": {"sales": 42747.47059194, "op": 3136.6471825, "net": 2028.90402212, "assets": 64734.08196266, "debt": 33601.65886101, "equity": 31132.42310165, "margin": 7.3376205400359105, "debtRatio": 107.93139599605766, "apiDebtRatio": 107.9313959961}, "2024": {"sales": 44088.57554877, "op": 3524.08995754, "net": 2557.40271585, "assets": 68219.46601782, "debt": 37957.83028649, "equity": 30261.63573133, "margin": 7.993204392919689, "debtRatio": 125.4321829245737, "apiDebtRatio": 125.4321829246}, "2025": {"sales": 45331.71234703, "op": 2888.20969045, "net": 1629.46332146, "assets": 68755.81409603, "debt": 40569.31629253, "equity": 28186.4978035, "margin": 6.371278605890181, "debtRatio": 143.9317384350332, "apiDebtRatio": 143.931738435}}, "scores": {"2024": {"score": 4, "checks": {"매출 증가": true, "영업이익 증가": true, "영업이익률 상승": true, "순이익 증가": true, "부채비율 하락": false}}, "2025": {"score": 1, "checks": {"매출 증가": true, "영업이익 증가": false, "영업이익률 상승": false, "순이익 증가": false, "부채비율 하락": false}}}, "latest": "2025", "records": 6}, {"name": "SK네트웍스", "crno": "130111-0005199", "bizno": "124-81-00718", "market": "유가증권시장", "industry": "기타 전문 도매업", "sector": "유통·서비스", "basis": "연결", "years": {"2023": {"sales": 91338.67, "op": 2372.83, "net": 54.59, "assets": 91103.59, "debt": 69545.18, "equity": 21558.41, "margin": 2.5978372577573112, "debtRatio": 322.58956017628384, "apiDebtRatio": 322.5895601763}, "2024": {"sales": 76572.81, "op": 1139.15, "net": 462.92, "assets": 51571.29, "debt": 31038.2, "equity": 20533.09, "margin": 1.4876690564183292, "debtRatio": 151.16185630121913, "apiDebtRatio": 151.1618563012}, "2025": {"sales": 67451.27, "op": 862.93, "net": 499.81, "assets": 50407.92, "debt": 30151.61, "equity": 20256.31, "margin": 1.2793384023755223, "debtRatio": 148.8504569687174, "apiDebtRatio": 148.8504569687}}, "scores": {"2024": {"score": 2, "checks": {"매출 증가": false, "영업이익 증가": false, "영업이익률 상승": false, "순이익 증가": true, "부채비율 하락": true}}, "2025": {"score": 2, "checks": {"매출 증가": false, "영업이익 증가": false, "영업이익률 상승": false, "순이익 증가": true, "부채비율 하락": true}}}, "latest": "2025", "records": 6}, {"name": "SK바이오사이언스", "crno": "131111-0523736", "bizno": "818-86-00991", "market": "유가증권시장", "industry": "기초 의약 물질 제조업", "sector": "바이오", "basis": "연결", "years": {"2023": {"sales": 3695.05555858, "op": -119.87764772, "net": 223.17719237, "assets": 18524.39180084, "debt": 1485.83863708, "equity": 17038.55316376, "margin": -3.244271860585194, "debtRatio": 8.720450749540703, "apiDebtRatio": 8.7204507495}, "2024": {"sales": 2675.45049154, "op": -1384.31298006, "net": -501.17070464, "assets": 28435.96036892, "debt": 8211.43859318, "equity": 20224.52177574, "margin": -51.74130429388675, "debtRatio": 40.60139806633104, "apiDebtRatio": 40.6013980663}, "2025": {"sales": 6513.68342533, "op": -1235.01682766, "net": -561.73210192, "assets": 29557.43509068, "debt": 9182.89306349, "equity": 20374.54202719, "margin": -18.96034466239708, "debtRatio": 45.070426865228924, "apiDebtRatio": 45.0704268652}}, "scores": {"2024": {"score": 0, "checks": {"매출 증가": false, "영업이익 증가": false, "영업이익률 상승": false, "순이익 증가": false, "부채비율 하락": false}}, "2025": {"score": 3, "checks": {"매출 증가": true, "영업이익 증가": true, "영업이익률 상승": true, "순이익 증가": false, "부채비율 하락": false}}}, "latest": "2025", "records": 6}, {"name": "SK바이오팜", "crno": "110111-4570720", "bizno": "101-86-62394", "market": "유가증권시장", "industry": "자연과학 연구개발업", "sector": "바이오", "basis": "연결", "years": {"2023": {"sales": 3548.91555524, "op": -375.22197049, "net": -353.79488498, "assets": 7231.70577189, "debt": 4022.19382621, "equity": 3209.51194568, "margin": -10.572862742140538, "debtRatio": 125.32104239785954, "apiDebtRatio": 125.3210423979}, "2024": {"sales": 5475.96283214, "op": 963.39659521, "net": 2269.73435375, "assets": 10368.10779623, "debt": 4628.26530311, "equity": 5739.84249312, "margin": 17.59319090983504, "debtRatio": 80.63401232102832, "apiDebtRatio": 80.634012321}, "2025": {"sales": 7067.40960308, "op": 2039.38471064, "net": 2532.53847619, "assets": 11983.08575535, "debt": 3720.39049706, "equity": 8262.69525829, "margin": 28.856183880317754, "debtRatio": 45.026354969673065, "apiDebtRatio": 45.0263549697}}, "scores": {"2024": {"score": 5, "checks": {"매출 증가": true, "영업이익 증가": true, "영업이익률 상승": true, "순이익 증가": true, "부채비율 하락": true}}, "2025": {"score": 5, "checks": {"매출 증가": true, "영업이익 증가": true, "영업이익률 상승": true, "순이익 증가": true, "부채비율 하락": true}}}, "latest": "2025", "records": 6}, {"name": "SK에코플랜트", "crno": "110111-0038805", "bizno": "101-81-34928", "market": "기타법인", "industry": "기타 토목시설물 건설업", "sector": "건설·부동산", "basis": "연결", "years": {"2023": {"sales": 89250.73172, "op": 1745.03876, "net": -336.46289, "assets": 149160.26405, "debt": 104868.09986, "equity": 44292.16419, "margin": 1.955209471530818, "debtRatio": 236.76445208264724, "apiDebtRatio": 236.7644520826}, "2024": {"sales": 93176.15716, "op": 2346.50452, "net": -958.5567, "assets": 168556.56002, "debt": 117944.48212, "equity": 50612.0779, "margin": 2.518352968743533, "debtRatio": 233.03623762106, "apiDebtRatio": 233.0362376211}, "2025": {"sales": 121915.68763, "op": 3159.43937, "net": 231.48632, "assets": 180087.70674, "debt": 118410.70243, "equity": 61677.00431, "margin": 2.5914953451999816, "debtRatio": 191.98517138550696, "apiDebtRatio": 191.9851713855}}, "scores": {"2024": {"score": 4, "checks": {"매출 증가": true, "영업이익 증가": true, "영업이익률 상승": true, "순이익 증가": false, "부채비율 하락": true}}, "2025": {"score": 5, "checks": {"매출 증가": true, "영업이익 증가": true, "영업이익률 상승": true, "순이익 증가": true, "부채비율 하락": true}}}, "latest": "2025", "records": 6}, {"name": "SK오션플랜트", "crno": "191311-0003485", "bizno": "615-81-06111", "market": "유가증권시장", "industry": "철강관 제조업", "sector": "건설·부동산", "basis": "연결", "years": {"2023": {"sales": 9258.35675846, "op": 756.04296314, "net": 575.48769236, "assets": 14319.0666688, "debt": 7330.64705288, "equity": 6988.41961592, "margin": 8.166059948480072, "debtRatio": 104.89706479817535, "apiDebtRatio": 104.8970647982}, "2024": {"sales": 6626.15726791, "op": 417.97283162, "net": 168.71459149, "assets": 14219.41567198, "debt": 7084.35867254, "equity": 7135.05699944, "margin": 6.307921993403509, "debtRatio": 99.28944748578772, "apiDebtRatio": 99.2894474858}, "2025": {"sales": 9653.88430763, "op": 595.09493978, "net": 375.10843066, "assets": 11482.41651965, "debt": 3336.97238779, "equity": 8145.44413186, "margin": 6.1643056910228715, "debtRatio": 40.96734731428337, "apiDebtRatio": 40.9673473143}}, "scores": {"2024": {"score": 1, "checks": {"매출 증가": false, "영업이익 증가": false, "영업이익률 상승": false, "순이익 증가": false, "부채비율 하락": true}}, "2025": {"score": 4, "checks": {"매출 증가": true, "영업이익 증가": true, "영업이익률 상승": false, "순이익 증가": true, "부채비율 하락": true}}}, "latest": "2025", "records": 6}, {"name": "SK디앤디", "crno": "110111-3001685", "bizno": "101-86-04792", "market": "유가증권시장", "industry": "비주거용 건물 개발 및 공급업", "sector": "건설·부동산", "basis": "연결", "years": {"2023": {"sales": 4796.75945477, "op": 1903.79796165, "net": 1030.78372585, "assets": 24230.76382258, "debt": 16611.98358797, "equity": 7618.78023461, "margin": 39.689252287955, "debtRatio": 218.03993653086852, "apiDebtRatio": 218.0399365309}, "2024": {"sales": 8708.76606195, "op": 536.7005356, "net": 441.95042809, "assets": 14622.24549572, "debt": 8921.9390244, "equity": 5700.30647132, "margin": 6.162762115576062, "debtRatio": 156.5168306175997, "apiDebtRatio": 156.5168306176}, "2025": {"sales": 4458.24154145, "op": 377.94681126, "net": 54.02840328, "assets": 15865.60899347, "debt": 10079.00716233, "equity": 5786.60183114, "margin": 8.477486195982923, "debtRatio": 174.1783425998116, "apiDebtRatio": 174.1783425998}}, "scores": {"2024": {"score": 2, "checks": {"매출 증가": true, "영업이익 증가": false, "영업이익률 상승": false, "순이익 증가": false, "부채비율 하락": true}}, "2025": {"score": 1, "checks": {"매출 증가": false, "영업이익 증가": false, "영업이익률 상승": true, "순이익 증가": false, "부채비율 하락": false}}}, "latest": "2025", "records": 6}, {"name": "SK리츠", "crno": "110111-7815446", "bizno": "248-86-02055", "market": "유가증권시장", "industry": "비주거용 건물 임대업", "sector": "건설·부동산", "basis": "연결", "years": {"2023": {"sales": 831.83721665, "op": 358.08941724, "net": 47.76022048, "assets": 149581.96158471, "debt": 106941.5588669, "equity": 42640.40271781, "margin": 43.04801589451702, "debtRatio": 250.7986605441528, "apiDebtRatio": 250.7986605442}, "2024": {"sales": 524.09629619, "op": 354.12431276, "net": 23.35602882, "assets": 173905.53335546, "debt": 122548.71255147, "equity": 51356.82080399, "margin": 67.56855855199933, "debtRatio": 238.6220771320583, "apiDebtRatio": 238.6220771321}, "2025": {"sales": 703.58094799, "op": 645.34748213, "net": 335.50467838, "assets": 200160.09404512, "debt": 127850.96793787, "equity": 72309.12610725, "margin": 91.72327419803476, "debtRatio": 176.811662401008, "apiDebtRatio": 176.811662401}}, "scores": {"2024": {"score": 2, "checks": {"매출 증가": false, "영업이익 증가": false, "영업이익률 상승": true, "순이익 증가": false, "부채비율 하락": true}}, "2025": {"score": 5, "checks": {"매출 증가": true, "영업이익 증가": true, "영업이익률 상승": true, "순이익 증가": true, "부채비율 하락": true}}}, "latest": "2025", "records": 6}], "excluded": [{"name": "SK텔링크", "crno": "110111-1533599", "reason": "API 데이터 없음"}, {"name": "SK플래닛", "crno": "110111-4699794", "reason": "API 데이터 없음"}]};
+const C = G.companies;
+const fmt = n => n==null ? "-" : Math.round(n).toLocaleString("ko-KR");
+const sg = (n,u="",d=1) => n==null||!isFinite(n) ? "-" : (n>0?"+":"")+n.toFixed(d)+u;
+const tip=document.getElementById("tip");
+const showTip=(e,h)=>{tip.innerHTML=h;tip.style.opacity=1;tip.style.left=Math.min(e.clientX+14,innerWidth-tip.offsetWidth-8)+"px";tip.style.top=(e.clientY+14)+"px"};
+const hideTip=()=>tip.style.opacity=0;
+
+const CHECKS=[["매출 증가","매"],["영업이익 증가","영"],["영업이익률 상승","률"],["순이익 증가","순"],["부채비율 하락","부"]];
+const cat = s => s>=4?"good":s>=2?"warn":"bad";
+const CAT = {good:["▲","개선"],warn:["▶","혼조"],bad:["▼","악화"],na:["–","2025 미공시"]};
+const badge = (k,txt) => `<span class="badge b-${k}">${CAT[k][0]} ${txt||CAT[k][1]}</span>`;
+
+C.forEach(c=>{
+  const ys=Object.keys(c.years); c.lastY=ys[ys.length-1]; c.prevY=ys[ys.length-2];
+  c.has2025 = c.lastY==="2025";
+  c.s25 = c.scores["2025"]?.score ?? null; c.s24 = c.scores["2024"]?.score ?? null;
+  c.cur = c.scores[c.lastY]; c.score = c.cur.score; c.k = c.has2025 ? cat(c.score) : "na";
+  const A=c.years[c.prevY], B=c.years[c.lastY];
+  c.A=A; c.B=B;
+  c.salesG = A.sales ? (B.sales/A.sales-1)*100 : null;
+  c.opD = B.op-A.op; c.netD=B.net-A.net;
+  c.marginD = (A.margin!=null&&B.margin!=null) ? B.margin-A.margin : null;
+  c.drD = (A.debtRatio!=null&&B.debtRatio!=null) ? B.debtRatio-A.debtRatio : null;
+  c.turn = A.op<0&&B.op>=0 ? "영업 흑자전환" : A.op>=0&&B.op<0 ? "영업 적자전환" : "";
+  c.netTurn = A.net<0&&B.net>=0 ? "순이익 흑자전환" : A.net>=0&&B.net<0 ? "순이익 적자전환" : "";
+});
+document.getElementById("nComp").textContent=C.length;
+
+const SECTORS=["전체",...new Set(C.map(c=>c.sector))];
+let sector="전체", selected=null;
+
+function kpis(){
+  const f=C.filter(c=>c.has2025);
+  const n=k=>f.filter(c=>c.k===k).length;
+  const tOn=f.filter(c=>c.turn==="영업 흑자전환").length, tOff=f.filter(c=>c.turn==="영업 적자전환").length;
+  const avg25=f.reduce((s,c)=>s+c.s25,0)/f.length, avg24=f.filter(c=>c.s24!=null).reduce((s,c)=>s+c.s24,0)/f.filter(c=>c.s24!=null).length;
+  document.getElementById("kpis").innerHTML=`
+   <div class="kpi"><div class="label">2025 평균 모멘텀 점수</div><div class="value">${avg25.toFixed(1)}<small>/ 5점</small></div><div class="hint">2024년 ${avg24.toFixed(1)}점 → ${sg(avg25-avg24,"점")}</div></div>
+   <div class="kpi good"><div class="label">${badge("good")} 4~5점</div><div class="value">${n("good")}<small>곳</small></div><div class="hint">2025 데이터 ${f.length}곳 중</div></div>
+   <div class="kpi warn"><div class="label">${badge("warn")} 2~3점</div><div class="value">${n("warn")}<small>곳</small></div><div class="hint">지표가 엇갈림</div></div>
+   <div class="kpi bad"><div class="label">${badge("bad")} 0~1점</div><div class="value">${n("bad")}<small>곳</small></div><div class="hint">대부분 지표 후퇴</div></div>
+   <div class="kpi"><div class="label">2025 영업이익 흑자전환</div><div class="value">${tOn}<small>곳</small></div><div class="hint">적자전환 ${tOff}곳</div></div>`;
+}
+function filters(){
+  const el=document.getElementById("filters");
+  el.innerHTML='<span>사업군</span>'+SECTORS.map(s=>`<button class="chip" aria-pressed="${s===sector}" data-s="${s}">${s}${s==="전체"?"":" ("+C.filter(c=>c.sector===s).length+")"}</button>`).join("");
+  el.querySelectorAll(".chip").forEach(b=>b.onclick=()=>{sector=b.dataset.s;filters();rank();table();});
+}
+function list(){
+  return C.filter(c=>sector==="전체"||c.sector===sector)
+    .sort((a,b)=>(b.has2025-a.has2025)||(b.score-a.score)||((b.opD/Math.max(1,Math.abs(b.A.op)))-(a.opD/Math.max(1,Math.abs(a.A.op)))));
+}
+function rank(){
+  const L=list();
+  if(!selected||!L.includes(selected)) selected=L[0];
+  document.getElementById("rank").innerHTML=L.map((c,i)=>{
+    const col={good:"var(--status-good)",warn:"var(--status-warn)",bad:"var(--status-bad)",na:"#9AA0A6"}[c.k];
+    const prevTxt = c.has2025 && c.s24!=null ? `24년 ${c.s24}점 → ${c.score>c.s24?"▲ 가속":c.score<c.s24?"▼ 감속":"= 유지"}` : (c.has2025?"":"2024년 기준");
+    return `<tr data-i="${C.indexOf(c)}" class="${c===selected?"sel":""}">
+      <td class="nm">${c.name}<div class="sec">${c.sector} · ${c.basis}</div></td>
+      <td style="width:28%"><div class="bar"><i style="width:${c.score*20}%;background:${col}"></i></div></td>
+      <td style="font-weight:700;white-space:nowrap">${c.score}점</td>
+      <td>${badge(c.k)}</td>
+      <td><div class="dots">${CHECKS.map(([n,s])=>`<b class="${c.cur.checks[n]?"y":"n"}" title="${n}">${s}</b>`).join("")}</div></td>
+      <td class="trend">${prevTxt}</td></tr>`}).join("");
+  document.querySelectorAll("#rank tr").forEach(tr=>tr.onclick=()=>{selected=C[+tr.dataset.i];rank();});
+  detail();
+}
+function miniBars(c){
+  const ys=Object.keys(c.years), keys=[["op","영업이익","var(--skb-red)"],["net","순이익","var(--skb-orange)"]];
+  const vals=ys.flatMap(y=>keys.map(k=>c.years[y][k[0]]));
+  let max=Math.max(0,...vals), min=Math.min(0,...vals); const pad=(max-min)*.18||1; max+=pad; if(min<0) min-=pad;
+  const W=460,H=230,P={l:58,r:10,t:16,b:28}, yv=v=>P.t+(H-P.t-P.b)*(max-v)/(max-min);
+  const gw=(W-P.l-P.r)/ys.length, bw=Math.min(36,(gw-28)/2);
+  let s=`<svg viewBox="0 0 ${W} ${H}" role="img" aria-label="${c.name} 영업이익·순이익 연도별">`;
+  const step=nice((max-min)/4);
+  for(let v=Math.ceil(min/step)*step; v<=max; v+=step) s+=`<line class="grid-line" x1="${P.l}" x2="${W-P.r}" y1="${yv(v)}" y2="${yv(v)}"/><text class="axis" x="${P.l-6}" y="${yv(v)+4}" text-anchor="end">${fmt(v)}</text>`;
+  s+=`<line class="zero" x1="${P.l}" x2="${W-P.r}" y1="${yv(0)}" y2="${yv(0)}"/>`;
+  ys.forEach((y,i)=>{ keys.forEach(([k,n,col],j)=>{
+      const v=c.years[y][k], x=P.l+gw*i+(gw-2*bw-2)/2+j*(bw+2), y0=yv(0), y1=yv(v), top=Math.min(y0,y1), h=Math.max(1,Math.abs(y0-y1));
+      s+=`<rect x="${x}" y="${top}" width="${bw}" height="${h}" rx="3" fill="${col}"/>`;
+      s+=`<text class="vlabel" x="${x+bw/2}" y="${v>=0?top-5:top+h+13}" text-anchor="middle">${fmt(v)}</text>`;
+      s+=`<rect class="hit" x="${x-3}" y="${P.t}" width="${bw+6}" height="${H-P.t-P.b}" data-tip="<b>${y}년 ${n}</b>${fmt(v)}억원"/>`;
+    });
+    s+=`<text class="axis" x="${P.l+gw*i+gw/2}" y="${H-8}" text-anchor="middle">${y}</text>`;});
+  return s+"</svg>";
+}
+function nice(r){const raw=r||1,m=10**Math.floor(Math.log10(raw)),n=raw/m;return (n<=1?1:n<=2?2:n<=5?5:10)*m;}
+function detail(){
+  const c=selected, A=c.A, B=c.B, el=document.getElementById("detail");
+  const dr=v=>v==null?"자본잠식":v.toFixed(1)+"%";
+  el.innerHTML=`<h2>${c.name}</h2>
+   <div class="meta">${c.industry} · ${c.market} · ${c.basis} 기준 · ${c.prevY}→${c.lastY} ${c.has2025?"":"(2025 데이터 없음)"}</div>
+   <div>${badge(c.k, c.has2025? `${CAT[c.k][1]} ${c.score}점`:`2024년 기준 ${c.score}점`)} ${c.turn?`<span class="badge ${c.turn.includes("흑자")?"b-good":"b-bad"}">${c.turn}</span>`:""} ${c.netTurn?`<span class="badge ${c.netTurn.includes("흑자")?"b-good":"b-bad"}">${c.netTurn}</span>`:""}</div>
+   <div class="checks">
+     <div>${c.cur.checks["매출 증가"]?"✔":"✖"} 매출 ${fmt(A.sales)} → ${fmt(B.sales)} (${sg(c.salesG,"%")})</div>
+     <div>${c.cur.checks["영업이익 증가"]?"✔":"✖"} 영업이익 ${fmt(A.op)} → ${fmt(B.op)}</div>
+     <div>${c.cur.checks["영업이익률 상승"]?"✔":"✖"} 영업이익률 ${A.margin?.toFixed(1)}% → ${B.margin?.toFixed(1)}%</div>
+     <div>${c.cur.checks["순이익 증가"]?"✔":"✖"} 순이익 ${fmt(A.net)} → ${fmt(B.net)}</div>
+     <div style="grid-column:1/-1">${c.cur.checks["부채비율 하락"]?"✔":"✖"} 부채비율 ${dr(A.debtRatio)} → ${dr(B.debtRatio)}</div>
+   </div>
+   <div style="display:flex;gap:14px;font-size:12.5px;color:var(--text-secondary)"><span><i style="display:inline-block;width:10px;height:10px;background:var(--skb-red);border-radius:2px;margin-right:4px"></i>영업이익</span><span><i style="display:inline-block;width:10px;height:10px;background:var(--skb-orange);border-radius:2px;margin-right:4px"></i>순이익</span><span>(억원)</span></div>
+   ${miniBars(c)}`;
+  el.querySelectorAll("[data-tip]").forEach(r=>{r.onmousemove=e=>showTip(e,r.dataset.tip);r.onmouseleave=hideTip;});
+}
+function sectorChart(){
+  const secs=SECTORS.slice(1).map(s=>{const f=C.filter(c=>c.sector===s&&c.has2025);
+    return {s,n:f.length,a24:f.reduce((t,c)=>t+c.s24,0)/f.length,a25:f.reduce((t,c)=>t+c.s25,0)/f.length};}).filter(d=>d.n);
+  const W=1000,H=250,P={l:36,r:10,t:30,b:40},gw=(W-P.l-P.r)/secs.length,bw=Math.min(40,(gw-30)/2),y=v=>P.t+(H-P.t-P.b)*(1-v/5);
+  let s=`<div style="display:flex;gap:14px;font-size:13px;color:var(--text-secondary);margin-bottom:4px"><span><i style="display:inline-block;width:10px;height:10px;background:#B8BCC2;border-radius:2px;margin-right:4px"></i>2024 점수</span><span><i style="display:inline-block;width:10px;height:10px;background:var(--skb-red);border-radius:2px;margin-right:4px"></i>2025 점수</span></div><svg viewBox="0 0 ${W} ${H}" role="img" aria-label="사업군별 평균 모멘텀 점수">`;
+  for(let v=0;v<=5;v++) s+=`<line class="grid-line" x1="${P.l}" x2="${W-P.r}" y1="${y(v)}" y2="${y(v)}"/><text class="axis" x="${P.l-6}" y="${y(v)+4}" text-anchor="end">${v}</text>`;
+  secs.forEach((d,i)=>{[["a24","#B8BCC2","2024"],["a25","var(--skb-red)","2025"]].forEach(([k,col,yr],j)=>{
+      const x=P.l+gw*i+(gw-2*bw-2)/2+j*(bw+2),v=d[k];
+      s+=`<rect x="${x}" y="${y(v)}" width="${bw}" height="${Math.max(1,y(0)-y(v))}" rx="3" fill="${col}"/><text class="vlabel" x="${x+bw/2}" y="${y(v)-5}" text-anchor="middle">${v.toFixed(1)}</text>`;
+      s+=`<rect class="hit" x="${x}" y="${P.t}" width="${bw}" height="${H-P.t-P.b}" data-tip="<b>${d.s} · ${yr}</b>평균 ${v.toFixed(2)}점 (${d.n}곳)"/>`;});
+    s+=`<text class="axis" x="${P.l+gw*i+gw/2}" y="${H-20}" text-anchor="middle">${d.s}</text><text class="axis" x="${P.l+gw*i+gw/2}" y="${H-4}" text-anchor="middle" style="font-size:11px">${d.n}곳</text>`;});
+  const el=document.getElementById("sectorChart"); el.innerHTML=s+"</svg>";
+  el.querySelectorAll("[data-tip]").forEach(r=>{r.onmousemove=e=>showTip(e,r.dataset.tip);r.onmouseleave=hideTip;});
+}
+function table(){
+  const L=list(), n=v=>v<0?`<span class="neg">${fmt(v)}</span>`:fmt(v);
+  document.getElementById("table").innerHTML=`<thead><tr><th>회사</th><th>사업군</th><th>기준</th><th>연도</th><th>점수</th><th>매출</th><th>매출 증감</th><th>영업이익</th><th>영업이익 증감</th><th>영업이익률</th><th>순이익</th><th>부채비율</th><th>부채비율 증감</th></tr></thead><tbody>`+
+   L.map(c=>`<tr><td>${c.name}</td><td>${c.sector}</td><td style="text-align:left">${c.basis}</td><td>${c.lastY}</td><td>${c.score}</td><td>${fmt(c.B.sales)}</td><td>${sg(c.salesG,"%")}</td><td>${n(c.B.op)}</td><td>${n(c.opD).replace(/^(\d)/,"+$1")}</td><td>${c.B.margin==null?"-":c.B.margin.toFixed(1)+"%"}</td><td>${n(c.B.net)}</td><td>${c.B.debtRatio==null?"자본잠식":c.B.debtRatio.toFixed(1)+"%"}</td><td>${sg(c.drD,"%p")}</td></tr>`).join("")+"</tbody>";
+}
+document.getElementById("notes").innerHTML=[
+  `출처: 공공데이터포털 「금융위원회_기업 재무정보」 API(요약재무제표). 조회 ${G.companies.length+G.excluded.length}곳 × 2023~2025년, 받은 원본 ${G.companies.reduce((s,c)=>s+c.records,0)}건.`,
+  `회사 범위: 상장 계열사와 주요 비상장 계열사를 직접 골랐어요. 공정위 공시대상기업집단 계열사 전체 목록이 아니에요. 법인등록번호는 DART 기업개황에서 확인했어요.`,
+  `제외: ${G.excluded.map(e=>e.name).join(", ")} (API 데이터 없음).`,
+  `2025 미공시: ${C.filter(c=>!c.has2025).map(c=>c.name).join(", ")} → 2023→2024 변화로 점수를 냈고 순위 아래쪽에 따로 두었어요.`,
+  `기준: 3개년 연결재무제표가 있으면 연결, 없으면 별도. SK인천석유화학은 2025년 연결이 없어 별도 기준이에요.`,
+  `점수: 매출·영업이익·순이익이 늘거나, 영업이익률이 오르거나, 부채비율이 내리면 각 1점. 4~5점 개선, 2~3점 혼조, 0~1점 악화. 적자 폭이 줄어도 '증가'로 봐요.`,
+  `부채비율 = 부채총계 ÷ 자본총계. 자본이 마이너스면 '자본잠식'으로 표시하고 하락 점수를 주지 않아요.`,
+  `이 화면은 공시 수치의 방향만 보여줘요. 인수·합병·분할 같은 회사 구조 변화나 일회성 손익은 반영하지 않았어요.`
+].map(t=>`<li>${t}</li>`).join("");
+kpis(); filters(); rank(); sectorChart(); table();
+</script>
+</body>
+</html>
