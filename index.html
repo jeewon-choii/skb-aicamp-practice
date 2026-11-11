@@ -1,0 +1,343 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>SKB AI Camp · 우리 팀 점심 메뉴 투표</title>
+<style>
+  :root {
+    --skb-red: #EA002C;
+    --skb-orange: #F47725;
+    --text-primary: #202124;
+    --text-secondary: #5F6368;
+    --bg-page: #F7F8FA;
+    --bg-card: #FFFFFF;
+    --border: #E5E7EB;
+    --status-good: #287D4E;
+    --status-warn: #925000;
+    --status-bad: #B42318;
+  }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0;
+    background: var(--bg-page);
+    color: var(--text-primary);
+    font-family: Pretendard, "Malgun Gothic", "Apple SD Gothic Neo", sans-serif;
+    line-height: 1.5;
+  }
+  header {
+    background: var(--bg-card);
+    border-bottom: 3px solid var(--skb-red);
+    padding: 20px 16px;
+  }
+  header .inner, main { max-width: 760px; margin: 0 auto; }
+  header small { color: var(--skb-red); font-weight: 700; letter-spacing: .02em; }
+  header h1 { margin: 4px 0 0; font-size: 1.6rem; }
+  header p { margin: 4px 0 0; color: var(--text-secondary); }
+  main { padding: 20px 16px 48px; display: grid; gap: 16px; }
+  .card {
+    background: var(--bg-card);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    padding: 20px;
+  }
+  .card h2 { margin: 0 0 12px; font-size: 1.15rem; }
+  form { display: flex; gap: 8px; flex-wrap: wrap; }
+  input[type=text] {
+    flex: 1 1 220px;
+    min-width: 0;
+    padding: 10px 12px;
+    font: inherit;
+    border: 1px solid var(--border);
+    border-radius: 8px;
+  }
+  input[type=text]:focus { outline: 2px solid var(--skb-orange); border-color: transparent; }
+  button {
+    font: inherit;
+    cursor: pointer;
+    border-radius: 8px;
+    padding: 10px 16px;
+    border: 1px solid transparent;
+  }
+  .btn-primary { background: var(--skb-red); color: #fff; font-weight: 700; }
+  .btn-primary:hover { background: #c70025; }
+  .btn-outline { background: var(--bg-card); color: var(--skb-red); border-color: var(--skb-red); font-weight: 700; }
+  .btn-outline:hover { background: #fff1f3; }
+  .btn-ghost { background: transparent; color: var(--text-secondary); border-color: var(--border); }
+  .btn-ghost:hover { color: var(--status-bad); border-color: var(--status-bad); }
+  .msg { min-height: 1.5em; margin: 8px 0 0; font-size: .9rem; }
+  .msg.error { color: var(--status-bad); }
+  .msg.ok { color: var(--status-good); }
+  ul.menu-list { list-style: none; margin: 0; padding: 0; display: grid; gap: 8px; }
+  ul.menu-list li {
+    display: flex; align-items: center; gap: 8px; flex-wrap: wrap;
+    padding: 10px 12px; border: 1px solid var(--border); border-radius: 10px;
+  }
+  .menu-name { flex: 1 1 140px; font-weight: 600; word-break: break-all; }
+  .menu-count { color: var(--text-secondary); font-size: .9rem; white-space: nowrap; }
+  .empty { color: var(--text-secondary); margin: 0; }
+  .summary { color: var(--text-secondary); margin: 0 0 12px; }
+  .summary strong { color: var(--text-primary); }
+  .bars { display: grid; gap: 12px; }
+  .bar-row .bar-label {
+    display: flex; justify-content: space-between; gap: 8px; flex-wrap: wrap;
+    font-size: .95rem; margin-bottom: 4px;
+  }
+  .bar-row .bar-label span:first-child { font-weight: 600; word-break: break-all; }
+  .bar-row .bar-label span:last-child { color: var(--text-secondary); white-space: nowrap; }
+  .bar-track { background: #EEF0F3; border-radius: 6px; height: 22px; overflow: hidden; }
+  .bar-fill { height: 100%; background: #9AA0A6; border-radius: 6px; transition: width .3s ease; }
+  .bar-row.top .bar-fill { background: var(--skb-red); }
+  .badge {
+    display: inline-block; margin-left: 6px; padding: 0 8px; border-radius: 999px;
+    background: #fff1f3; color: var(--skb-red); font-size: .8rem; font-weight: 700;
+  }
+  .legend { margin: 12px 0 0; font-size: .85rem; color: var(--text-secondary); display: flex; gap: 16px; flex-wrap: wrap; }
+  .legend i { display: inline-block; width: 12px; height: 12px; border-radius: 3px; vertical-align: -1px; margin-right: 4px; }
+  .footer-actions { display: flex; gap: 8px; flex-wrap: wrap; justify-content: flex-end; }
+  .note { color: var(--text-secondary); font-size: .85rem; margin: 0; }
+</style>
+</head>
+<body>
+<header>
+  <div class="inner">
+    <small>SKB AI Camp</small>
+    <h1>우리 팀 점심 메뉴 투표</h1>
+    <p>메뉴를 추가하고, 먹고 싶은 메뉴에 투표하세요.</p>
+  </div>
+</header>
+
+<main>
+  <section class="card" aria-labelledby="add-title">
+    <h2 id="add-title">① 메뉴 추가</h2>
+    <form id="add-form" autocomplete="off">
+      <label for="menu-input" class="sr-only" style="position:absolute;left:-9999px">메뉴 이름</label>
+      <input type="text" id="menu-input" maxlength="30" placeholder="예: 김치찌개, 돈가스, 쌀국수">
+      <button type="submit" class="btn-primary">추가</button>
+    </form>
+    <p id="add-msg" class="msg" role="status"></p>
+  </section>
+
+  <section class="card" aria-labelledby="vote-title">
+    <h2 id="vote-title">② 투표하기</h2>
+    <ul id="menu-list" class="menu-list"></ul>
+  </section>
+
+  <section class="card" aria-labelledby="result-title">
+    <h2 id="result-title">③ 투표 결과</h2>
+    <p id="summary" class="summary"></p>
+    <div id="bars" class="bars"></div>
+    <p class="legend" id="legend">
+      <span><i style="background:var(--skb-red)"></i>1위 (공동 1위 포함)</span>
+      <span><i style="background:#9AA0A6"></i>그 외 메뉴</span>
+      <span>단위: 표(득표 수)</span>
+    </p>
+  </section>
+
+  <section class="card">
+    <div class="footer-actions">
+      <button type="button" id="reset-votes" class="btn-ghost">투표 수만 초기화</button>
+      <button type="button" id="reset-all" class="btn-ghost">전체 초기화</button>
+    </div>
+    <p class="note" style="margin-top:12px">데이터는 이 브라우저에만 저장돼요. 다른 PC나 브라우저와는 공유되지 않아요.</p>
+  </section>
+</main>
+
+<script>
+(function () {
+  const STORAGE_KEY = 'skb-lunch-vote-v1';
+
+  function load() {
+    try {
+      const data = JSON.parse(localStorage.getItem(STORAGE_KEY));
+      if (data && Array.isArray(data.menus)) return data;
+    } catch (e) { /* 저장값이 깨졌으면 새로 시작 */ }
+    return { menus: [] };
+  }
+
+  function save() {
+    try {
+      localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
+    } catch (e) {
+      showMsg('브라우저에 저장하지 못했어요. 시크릿 모드인지 확인해 주세요.', 'error');
+    }
+  }
+
+  let state = load();
+
+  const form = document.getElementById('add-form');
+  const input = document.getElementById('menu-input');
+  const addMsg = document.getElementById('add-msg');
+  const list = document.getElementById('menu-list');
+  const bars = document.getElementById('bars');
+  const summary = document.getElementById('summary');
+  const legend = document.getElementById('legend');
+
+  function showMsg(text, type) {
+    addMsg.textContent = text;
+    addMsg.className = 'msg ' + (type || '');
+  }
+
+  function totalVotes() {
+    return state.menus.reduce((sum, m) => sum + m.votes, 0);
+  }
+
+  function render() {
+    // 투표 목록
+    list.replaceChildren();
+    if (state.menus.length === 0) {
+      const li = document.createElement('li');
+      li.innerHTML = '<p class="empty">아직 메뉴가 없어요. 위에서 메뉴를 추가해 주세요.</p>';
+      list.appendChild(li);
+    }
+    state.menus.forEach((m) => {
+      const li = document.createElement('li');
+
+      const name = document.createElement('span');
+      name.className = 'menu-name';
+      name.textContent = m.name;
+
+      const count = document.createElement('span');
+      count.className = 'menu-count';
+      count.textContent = m.votes + '표';
+
+      const vote = document.createElement('button');
+      vote.type = 'button';
+      vote.className = 'btn-outline';
+      vote.textContent = '👍 투표';
+      vote.setAttribute('aria-label', m.name + '에 투표');
+      vote.addEventListener('click', () => {
+        m.votes += 1;
+        save();
+        render();
+      });
+
+      const del = document.createElement('button');
+      del.type = 'button';
+      del.className = 'btn-ghost';
+      del.textContent = '삭제';
+      del.setAttribute('aria-label', m.name + ' 삭제');
+      del.addEventListener('click', () => {
+        if (!confirm('"' + m.name + '" 메뉴를 삭제할까요? 받은 ' + m.votes + '표도 함께 사라져요.')) return;
+        state.menus = state.menus.filter((x) => x.id !== m.id);
+        save();
+        render();
+      });
+
+      li.append(name, count, vote, del);
+      list.appendChild(li);
+    });
+
+    // 결과 막대그래프
+    const total = totalVotes();
+    bars.replaceChildren();
+    if (state.menus.length === 0) {
+      summary.textContent = '메뉴를 추가하면 결과가 여기에 표시돼요.';
+      legend.hidden = true;
+      return;
+    }
+    legend.hidden = false;
+    const maxVotes = Math.max(...state.menus.map((m) => m.votes));
+    const leaders = state.menus.filter((m) => m.votes === maxVotes && maxVotes > 0);
+
+    if (total === 0) {
+      summary.textContent = '메뉴 ' + state.menus.length + '개 · 아직 투표가 없어요.';
+    } else {
+      summary.innerHTML = '';
+      summary.append(
+        '메뉴 ' + state.menus.length + '개 · 총 ',
+        Object.assign(document.createElement('strong'), { textContent: total + '표' }),
+        ' · 1위: ',
+        Object.assign(document.createElement('strong'), {
+          textContent: leaders.map((m) => m.name).join(', ') + (leaders.length > 1 ? ' (공동)' : '')
+        })
+      );
+    }
+
+    const sorted = [...state.menus].sort((a, b) => b.votes - a.votes || a.createdAt - b.createdAt);
+    sorted.forEach((m) => {
+      const pct = total ? Math.round((m.votes / total) * 1000) / 10 : 0;
+      const isTop = maxVotes > 0 && m.votes === maxVotes;
+
+      const row = document.createElement('div');
+      row.className = 'bar-row' + (isTop ? ' top' : '');
+
+      const label = document.createElement('div');
+      label.className = 'bar-label';
+      const n = document.createElement('span');
+      n.textContent = m.name;
+      if (isTop) {
+        const b = document.createElement('span');
+        b.className = 'badge';
+        b.textContent = '1위';
+        n.appendChild(b);
+      }
+      const v = document.createElement('span');
+      v.textContent = m.votes + '표 (' + pct + '%)';
+      label.append(n, v);
+
+      const track = document.createElement('div');
+      track.className = 'bar-track';
+      track.setAttribute('role', 'img');
+      track.setAttribute('aria-label', m.name + ' ' + m.votes + '표, ' + pct + '퍼센트');
+      const fill = document.createElement('div');
+      fill.className = 'bar-fill';
+      fill.style.width = (maxVotes ? (m.votes / maxVotes) * 100 : 0) + '%';
+      track.appendChild(fill);
+
+      row.append(label, track);
+      bars.appendChild(row);
+    });
+  }
+
+  form.addEventListener('submit', (e) => {
+    e.preventDefault();
+    const name = input.value.trim().replace(/\s+/g, ' ');
+    if (!name) {
+      showMsg('메뉴 이름을 입력해 주세요.', 'error');
+      return;
+    }
+    if (state.menus.some((m) => m.name.toLowerCase() === name.toLowerCase())) {
+      showMsg('"' + name + '"은(는) 이미 있는 메뉴예요.', 'error');
+      return;
+    }
+    state.menus.push({
+      id: Date.now().toString(36) + Math.random().toString(36).slice(2, 7),
+      name: name,
+      votes: 0,
+      createdAt: Date.now()
+    });
+    save();
+    input.value = '';
+    input.focus();
+    showMsg('"' + name + '" 메뉴를 추가했어요.', 'ok');
+    render();
+  });
+
+  document.getElementById('reset-votes').addEventListener('click', () => {
+    if (!state.menus.length) return;
+    if (!confirm('모든 메뉴의 투표 수를 0으로 되돌릴까요? 메뉴 목록은 그대로 남아요.')) return;
+    state.menus.forEach((m) => { m.votes = 0; });
+    save();
+    render();
+  });
+
+  document.getElementById('reset-all').addEventListener('click', () => {
+    if (!state.menus.length) return;
+    if (!confirm('메뉴와 투표를 모두 지울까요? 되돌릴 수 없어요.')) return;
+    state = { menus: [] };
+    save();
+    showMsg('', '');
+    render();
+  });
+
+  // 다른 탭에서 바뀐 내용도 반영
+  window.addEventListener('storage', (e) => {
+    if (e.key === STORAGE_KEY) { state = load(); render(); }
+  });
+
+  render();
+})();
+</script>
+</body>
+</html>
