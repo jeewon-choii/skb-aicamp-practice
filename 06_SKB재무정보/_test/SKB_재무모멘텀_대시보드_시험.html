@@ -1,0 +1,258 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>SKB AI Camp · SK브로드밴드 재무 개선 모멘텀 (시험 실행)</title>
+<style>
+:root{
+  --skb-red:#EA002C; --skb-orange:#F47725;
+  --text-primary:#202124; --text-secondary:#5F6368;
+  --bg-page:#F7F8FA; --bg-card:#FFFFFF; --border:#E5E7EB;
+  --status-good:#287D4E; --status-warn:#925000; --status-bad:#B42318;
+}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg-page);color:var(--text-primary);
+  font-family:Pretendard,"Malgun Gothic","Apple SD Gothic Neo",sans-serif;line-height:1.5}
+.wrap{max-width:1240px;margin:0 auto;padding:28px 20px 48px}
+header{border-bottom:3px solid var(--skb-red);padding-bottom:14px;margin-bottom:20px}
+.eyebrow{font-size:13px;color:var(--skb-red);font-weight:700}
+h1{margin:4px 0 2px;font-size:26px}
+.sub{color:var(--text-secondary);font-size:14px}
+.kpis{display:grid;grid-template-columns:repeat(auto-fit,minmax(170px,1fr));gap:12px;margin-bottom:20px}
+.kpi{background:var(--bg-card);border:1px solid var(--border);border-radius:10px;padding:14px 16px}
+.kpi .label{font-size:13px;color:var(--text-secondary)}
+.kpi .value{font-size:28px;font-weight:700;font-variant-numeric:tabular-nums}
+.kpi .value small{font-size:14px;font-weight:400;color:var(--text-secondary);margin-left:2px}
+.kpi .hint{font-size:12px;color:var(--text-secondary)}
+.kpi.good{border-top:4px solid var(--status-good)} .kpi.warn{border-top:4px solid var(--status-warn)} .kpi.bad{border-top:4px solid var(--status-bad)}
+.badge{display:inline-flex;gap:4px;align-items:center;font-size:12.5px;font-weight:700;padding:2px 8px;border-radius:999px;white-space:nowrap}
+.b-good{color:var(--status-good);background:#E8F3EC}
+.b-warn{color:var(--status-warn);background:#FBF1E3}
+.b-bad{color:var(--status-bad);background:#FCEBEA}
+.b-na{color:var(--text-secondary);background:#EEF0F2}
+.filters{display:flex;flex-wrap:wrap;gap:8px;align-items:center;margin-bottom:14px}
+.filters span{font-size:13px;color:var(--text-secondary);margin-right:4px}
+.chip{border:1px solid var(--border);background:var(--bg-card);border-radius:999px;padding:6px 14px;font:inherit;font-size:13px;cursor:pointer;color:var(--text-secondary)}
+.chip[aria-pressed="true"]{border-color:var(--skb-red);color:var(--skb-red);font-weight:700;background:#FFF3F5}
+.layout{display:grid;grid-template-columns:minmax(0,1.35fr) minmax(0,1fr);gap:16px;margin-bottom:20px}
+@media (max-width:960px){.layout{grid-template-columns:1fr}}
+.card{background:var(--bg-card);border:1px solid var(--border);border-radius:10px;padding:16px 18px;min-width:0}
+.card h3{margin:0;font-size:16px}
+.card .desc{font-size:13px;color:var(--text-secondary);margin:2px 0 10px}
+.rank{width:100%;border-collapse:collapse;font-size:13.5px}
+.rank td{padding:6px 6px;border-bottom:1px solid var(--border);vertical-align:middle}
+.rank tr{cursor:pointer}
+.rank tr:hover td,.rank tr.sel td{background:#FFF6F7}
+.rank .nm{white-space:nowrap;font-weight:600}
+.rank .sec{font-size:12px;color:var(--text-secondary);white-space:nowrap}
+.bar{position:relative;height:14px;background:#F1F2F4;border-radius:4px;min-width:90px}
+.bar i{position:absolute;left:0;top:0;bottom:0;border-radius:4px}
+.dots{display:flex;gap:3px}
+.dots b{width:20px;height:20px;border-radius:4px;font-size:11px;display:flex;align-items:center;justify-content:center;font-weight:700}
+.dots .y{background:#E8F3EC;color:var(--status-good)} .dots .n{background:#F1F2F4;color:#9AA0A6}
+.trend{font-size:12.5px;white-space:nowrap;color:var(--text-secondary)}
+.legend-row{display:flex;flex-wrap:wrap;gap:12px;font-size:12px;color:var(--text-secondary);margin-bottom:8px}
+.detail h2{margin:0;font-size:20px}
+.detail .meta{font-size:12.5px;color:var(--text-secondary);margin:2px 0 12px}
+.checks{display:grid;grid-template-columns:1fr 1fr;gap:6px;margin:10px 0 14px;font-size:13px}
+.checks div{padding:6px 10px;border-radius:6px;background:var(--bg-page)}
+svg{display:block;width:100%;height:auto;overflow:visible}
+svg text{font-family:inherit}
+.axis{fill:var(--text-secondary);font-size:12px}
+.vlabel{fill:var(--text-primary);font-size:12px;font-weight:700}
+.grid-line{stroke:var(--border)}
+.zero{stroke:#9AA0A6}
+table.data{width:100%;border-collapse:collapse;font-size:13px;font-variant-numeric:tabular-nums}
+table.data th,table.data td{padding:8px 8px;border-bottom:1px solid var(--border);text-align:right;white-space:nowrap}
+table.data th:first-child,table.data td:first-child,table.data th:nth-child(2),table.data td:nth-child(2){text-align:left}
+table.data thead th{background:var(--bg-page);color:var(--text-secondary);font-weight:600;border-bottom:2px solid var(--skb-red);position:sticky;top:0}
+.tbl{overflow-x:auto}
+.neg{color:var(--status-bad)}
+.notes{font-size:12.5px;color:var(--text-secondary);margin:10px 0 0;padding-left:18px}
+.notes li{margin:3px 0}
+#tip{position:fixed;pointer-events:none;background:var(--text-primary);color:#fff;font-size:13px;padding:8px 10px;border-radius:6px;opacity:0;z-index:10;max-width:260px}
+.hit{fill:transparent}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header>
+    <div class="eyebrow">SKB AI Camp · 공공데이터 실습</div>
+    <h1 id="ttl"></h1>
+    <div class="sub" id="sub"></div>
+  </header>
+
+  <section class="kpis" id="kpis"></section>
+
+  <div class="filters" id="filters"><span>사업군</span></div>
+
+  <section class="layout">
+    <div class="card">
+      <h3>모멘텀 점수 순위 (5점 만점)</h3>
+      <div class="desc">전년 대비 5개 지표 중 좋아진 개수. 행을 누르면 오른쪽에 상세가 나와요.</div>
+      <div class="legend-row">
+        <span>점검 항목: <b>매</b> 매출 증가 · <b>영</b> 영업이익 증가 · <b>률</b> 영업이익률 상승 · <b>순</b> 순이익 증가 · <b>부</b> 부채비율 하락</span>
+      </div>
+      <table class="rank" id="rank"></table>
+    </div>
+    <div class="card detail" id="detail"></div>
+  </section>
+
+  <section class="card" style="margin-bottom:20px">
+    <h3>사업군별 평균 모멘텀 점수</h3>
+    <div class="desc" id="secDesc"></div>
+    <div id="sectorChart"></div>
+  </section>
+
+  <section class="card">
+    <h3>전체 수치표</h3>
+    <div class="desc">최근 연도 기준 · 증감은 전년 대비 · 억원 미만 반올림</div>
+    <div class="tbl"><table class="data" id="table"></table></div>
+    <ul class="notes" id="notes"></ul>
+  </section>
+</div>
+<div id="tip" role="tooltip"></div>
+
+<script>
+const G = {"meta": {"title": "SK브로드밴드 재무 개선 모멘텀 (시험 실행)", "subtitle": "", "source": "SKB_요약재무제표_2023-2025.xlsx «원본데이터» 시트 (원출처: 공공데이터포털 「금융위원회_기업 재무정보」 API)", "unit_in": "원", "lastYear": "2025", "years": ["2023", "2024", "2025"], "rawRows": 6, "prefer": "연결", "notes": ["시험 실행이에요. 대상은 SK브로드밴드 1곳이고, 연결·별도 모두 2023~2025년 값이 있어 기본값인 연결 기준으로 점수를 냈어요."]}, "companies": [{"name": "SK브로드밴드", "sector": "기타", "market": "", "industry": "", "crno": "110111-1466659", "basis": "연결", "years": {"2023": {"sales": 42747.47059194, "op": 3136.6471825, "net": 2028.90402212, "assets": 64734.08196266, "debt": 33601.65886101, "equity": 31132.42310165, "margin": 7.3376205400359105, "debtRatio": 107.93139599605766}, "2024": {"sales": 44088.57554877, "op": 3524.08995754, "net": 2557.4027158500003, "assets": 68219.46601782, "debt": 37957.83028649, "equity": 30261.63573133, "margin": 7.993204392919689, "debtRatio": 125.4321829245737}, "2025": {"sales": 45331.71234703, "op": 2888.20969045, "net": 1629.46332146, "assets": 68755.81409603001, "debt": 40569.31629253, "equity": 28186.497803500002, "margin": 6.371278605890181, "debtRatio": 143.9317384350332}}, "scores": {"2024": {"score": 4, "checks": {"매출 증가": true, "영업이익 증가": true, "영업이익률 상승": true, "순이익 증가": true, "부채비율 하락": false}}, "2025": {"score": 1, "checks": {"매출 증가": true, "영업이익 증가": false, "영업이익률 상승": false, "순이익 증가": false, "부채비율 하락": false}}}, "records": 6}], "excluded": []};
+const C = G.companies, M = G.meta, LY = M.lastYear, PY = String(+LY-1);
+const fmt = n => n==null ? "-" : Math.round(n).toLocaleString("ko-KR");
+const sg = (n,u="",d=1) => n==null||!isFinite(n) ? "-" : (n>0?"+":"")+n.toFixed(d)+u;
+const tip=document.getElementById("tip");
+const showTip=(e,h)=>{tip.innerHTML=h;tip.style.opacity=1;tip.style.left=Math.min(e.clientX+14,innerWidth-tip.offsetWidth-8)+"px";tip.style.top=(e.clientY+14)+"px"};
+const hideTip=()=>tip.style.opacity=0;
+
+const CHECKS=[["매출 증가","매"],["영업이익 증가","영"],["영업이익률 상승","률"],["순이익 증가","순"],["부채비율 하락","부"]];
+const cat = s => s>=4?"good":s>=2?"warn":"bad";
+const CAT = {good:["▲","개선"],warn:["▶","혼조"],bad:["▼","악화"],na:["–",LY+" 미공시"]};
+const badge = (k,txt) => `<span class="badge b-${k}">${CAT[k][0]} ${txt||CAT[k][1]}</span>`;
+
+C.forEach(c=>{
+  const ys=Object.keys(c.years); c.lastY=ys[ys.length-1]; c.prevY=ys[ys.length-2];
+  c.has2025 = c.lastY===LY;
+  c.s25 = c.scores[LY]?.score ?? null; c.s24 = c.scores[PY]?.score ?? null;
+  c.cur = c.scores[c.lastY]; c.score = c.cur.score; c.k = c.has2025 ? cat(c.score) : "na";
+  const A=c.years[c.prevY], B=c.years[c.lastY];
+  c.A=A; c.B=B;
+  c.salesG = A.sales ? (B.sales/A.sales-1)*100 : null;
+  c.opD = B.op-A.op; c.netD=B.net-A.net;
+  c.marginD = (A.margin!=null&&B.margin!=null) ? B.margin-A.margin : null;
+  c.drD = (A.debtRatio!=null&&B.debtRatio!=null) ? B.debtRatio-A.debtRatio : null;
+  c.turn = A.op<0&&B.op>=0 ? "영업 흑자전환" : A.op>=0&&B.op<0 ? "영업 적자전환" : "";
+  c.netTurn = A.net<0&&B.net>=0 ? "순이익 흑자전환" : A.net>=0&&B.net<0 ? "순이익 적자전환" : "";
+});
+document.getElementById("ttl").textContent=M.title;
+document.getElementById("sub").textContent=(M.subtitle||`${C.length}곳 · ${LY} vs ${PY} 전년 대비 (${M.prefer} 우선)`)+" · 금액 단위 억원";
+document.getElementById("secDesc").textContent=`${PY}년(전년 대비)과 ${LY}년(전년 대비) 비교 · ${LY} 데이터가 없는 회사는 제외`;
+
+const SECTORS=["전체",...new Set(C.map(c=>c.sector))];
+let sector="전체", selected=null;
+
+function kpis(){
+  const f=C.filter(c=>c.has2025);
+  const n=k=>f.filter(c=>c.k===k).length;
+  const tOn=f.filter(c=>c.turn==="영업 흑자전환").length, tOff=f.filter(c=>c.turn==="영업 적자전환").length;
+  const f24=f.filter(c=>c.s24!=null); const avg25=f.reduce((s,c)=>s+c.s25,0)/f.length, avg24=f24.length? f24.reduce((s,c)=>s+c.s24,0)/f24.length : null;
+  document.getElementById("kpis").innerHTML=`
+   <div class="kpi"><div class="label">${LY} 평균 모멘텀 점수</div><div class="value">${avg25.toFixed(1)}<small>/ 5점</small></div><div class="hint">${avg24==null?"전년 점수 없음":`${PY}년 ${avg24.toFixed(1)}점 → ${sg(avg25-avg24,"점")}`}</div></div>
+   <div class="kpi good"><div class="label">${badge("good")} 4~5점</div><div class="value">${n("good")}<small>곳</small></div><div class="hint">${LY} 데이터 ${f.length}곳 중</div></div>
+   <div class="kpi warn"><div class="label">${badge("warn")} 2~3점</div><div class="value">${n("warn")}<small>곳</small></div><div class="hint">지표가 엇갈림</div></div>
+   <div class="kpi bad"><div class="label">${badge("bad")} 0~1점</div><div class="value">${n("bad")}<small>곳</small></div><div class="hint">대부분 지표 후퇴</div></div>
+   <div class="kpi"><div class="label">${LY} 영업이익 흑자전환</div><div class="value">${tOn}<small>곳</small></div><div class="hint">적자전환 ${tOff}곳</div></div>`;
+}
+function filters(){
+  const el=document.getElementById("filters");
+  el.innerHTML='<span>사업군</span>'+SECTORS.map(s=>`<button class="chip" aria-pressed="${s===sector}" data-s="${s}">${s}${s==="전체"?"":" ("+C.filter(c=>c.sector===s).length+")"}</button>`).join("");
+  el.querySelectorAll(".chip").forEach(b=>b.onclick=()=>{sector=b.dataset.s;filters();rank();table();});
+}
+function list(){
+  return C.filter(c=>sector==="전체"||c.sector===sector)
+    .sort((a,b)=>(b.has2025-a.has2025)||(b.score-a.score)||((b.opD/Math.max(1,Math.abs(b.A.op)))-(a.opD/Math.max(1,Math.abs(a.A.op)))));
+}
+function rank(){
+  const L=list();
+  if(!selected||!L.includes(selected)) selected=L[0];
+  document.getElementById("rank").innerHTML=L.map((c,i)=>{
+    const col={good:"var(--status-good)",warn:"var(--status-warn)",bad:"var(--status-bad)",na:"#9AA0A6"}[c.k];
+    const prevTxt = c.has2025 && c.s24!=null ? `${PY.slice(2)}년 ${c.s24}점 → ${c.score>c.s24?"▲ 가속":c.score<c.s24?"▼ 감속":"= 유지"}` : `${c.lastY}년 기준`;
+    return `<tr data-i="${C.indexOf(c)}" class="${c===selected?"sel":""}">
+      <td class="nm">${c.name}<div class="sec">${c.sector} · ${c.basis}</div></td>
+      <td style="width:28%"><div class="bar"><i style="width:${c.score*20}%;background:${col}"></i></div></td>
+      <td style="font-weight:700;white-space:nowrap">${c.score}점</td>
+      <td>${badge(c.k)}</td>
+      <td><div class="dots">${CHECKS.map(([n,s])=>`<b class="${c.cur.checks[n]?"y":"n"}" title="${n}">${s}</b>`).join("")}</div></td>
+      <td class="trend">${prevTxt}</td></tr>`}).join("");
+  document.querySelectorAll("#rank tr").forEach(tr=>tr.onclick=()=>{selected=C[+tr.dataset.i];rank();});
+  detail();
+}
+function miniBars(c){
+  const ys=Object.keys(c.years), keys=[["op","영업이익","var(--skb-red)"],["net","순이익","var(--skb-orange)"]];
+  const vals=ys.flatMap(y=>keys.map(k=>c.years[y][k[0]]));
+  let max=Math.max(0,...vals), min=Math.min(0,...vals); const pad=(max-min)*.18||1; max+=pad; if(min<0) min-=pad;
+  const W=460,H=230,P={l:58,r:10,t:16,b:28}, yv=v=>P.t+(H-P.t-P.b)*(max-v)/(max-min);
+  const gw=(W-P.l-P.r)/ys.length, bw=Math.min(36,(gw-28)/2);
+  let s=`<svg viewBox="0 0 ${W} ${H}" role="img" aria-label="${c.name} 영업이익·순이익 연도별">`;
+  const step=nice((max-min)/4);
+  for(let v=Math.ceil(min/step)*step; v<=max; v+=step) s+=`<line class="grid-line" x1="${P.l}" x2="${W-P.r}" y1="${yv(v)}" y2="${yv(v)}"/><text class="axis" x="${P.l-6}" y="${yv(v)+4}" text-anchor="end">${fmt(v)}</text>`;
+  s+=`<line class="zero" x1="${P.l}" x2="${W-P.r}" y1="${yv(0)}" y2="${yv(0)}"/>`;
+  ys.forEach((y,i)=>{ keys.forEach(([k,n,col],j)=>{
+      const v=c.years[y][k], x=P.l+gw*i+(gw-2*bw-2)/2+j*(bw+2), y0=yv(0), y1=yv(v), top=Math.min(y0,y1), h=Math.max(1,Math.abs(y0-y1));
+      s+=`<rect x="${x}" y="${top}" width="${bw}" height="${h}" rx="3" fill="${col}"/>`;
+      s+=`<text class="vlabel" x="${x+bw/2}" y="${v>=0?top-5:top+h+13}" text-anchor="middle">${fmt(v)}</text>`;
+      s+=`<rect class="hit" x="${x-3}" y="${P.t}" width="${bw+6}" height="${H-P.t-P.b}" data-tip="<b>${y}년 ${n}</b>${fmt(v)}억원"/>`;
+    });
+    s+=`<text class="axis" x="${P.l+gw*i+gw/2}" y="${H-8}" text-anchor="middle">${y}</text>`;});
+  return s+"</svg>";
+}
+function nice(r){const raw=r||1,m=10**Math.floor(Math.log10(raw)),n=raw/m;return (n<=1?1:n<=2?2:n<=5?5:10)*m;}
+function detail(){
+  const c=selected, A=c.A, B=c.B, el=document.getElementById("detail");
+  const dr=v=>v==null?"자본잠식":v.toFixed(1)+"%";
+  el.innerHTML=`<h2>${c.name}</h2>
+   <div class="meta">${c.industry} · ${c.market} · ${c.basis} 기준 · ${c.prevY}→${c.lastY} ${c.has2025?"":`(${LY} 데이터 없음)`}</div>
+   <div>${badge(c.k, c.has2025? `${CAT[c.k][1]} ${c.score}점`:`${c.lastY}년 기준 ${c.score}점`)} ${c.turn?`<span class="badge ${c.turn.includes("흑자")?"b-good":"b-bad"}">${c.turn}</span>`:""} ${c.netTurn?`<span class="badge ${c.netTurn.includes("흑자")?"b-good":"b-bad"}">${c.netTurn}</span>`:""}</div>
+   <div class="checks">
+     <div>${c.cur.checks["매출 증가"]?"✔":"✖"} 매출 ${fmt(A.sales)} → ${fmt(B.sales)} (${sg(c.salesG,"%")})</div>
+     <div>${c.cur.checks["영업이익 증가"]?"✔":"✖"} 영업이익 ${fmt(A.op)} → ${fmt(B.op)}</div>
+     <div>${c.cur.checks["영업이익률 상승"]?"✔":"✖"} 영업이익률 ${A.margin?.toFixed(1)}% → ${B.margin?.toFixed(1)}%</div>
+     <div>${c.cur.checks["순이익 증가"]?"✔":"✖"} 순이익 ${fmt(A.net)} → ${fmt(B.net)}</div>
+     <div style="grid-column:1/-1">${c.cur.checks["부채비율 하락"]?"✔":"✖"} 부채비율 ${dr(A.debtRatio)} → ${dr(B.debtRatio)}</div>
+   </div>
+   <div style="display:flex;gap:14px;font-size:12.5px;color:var(--text-secondary)"><span><i style="display:inline-block;width:10px;height:10px;background:var(--skb-red);border-radius:2px;margin-right:4px"></i>영업이익</span><span><i style="display:inline-block;width:10px;height:10px;background:var(--skb-orange);border-radius:2px;margin-right:4px"></i>순이익</span><span>(억원)</span></div>
+   ${miniBars(c)}`;
+  el.querySelectorAll("[data-tip]").forEach(r=>{r.onmousemove=e=>showTip(e,r.dataset.tip);r.onmouseleave=hideTip;});
+}
+function sectorChart(){
+  const secs=SECTORS.slice(1).map(s=>{const f=C.filter(c=>c.sector===s&&c.has2025);
+    return {s,n:f.length,a24:f.filter(c=>c.s24!=null).length? f.filter(c=>c.s24!=null).reduce((t,c)=>t+c.s24,0)/f.filter(c=>c.s24!=null).length : null,a25:f.reduce((t,c)=>t+c.s25,0)/f.length};}).filter(d=>d.n);
+  const W=1000,H=250,P={l:36,r:10,t:30,b:40},gw=(W-P.l-P.r)/secs.length,bw=Math.min(40,(gw-30)/2),y=v=>P.t+(H-P.t-P.b)*(1-v/5);
+  let s=`<div style="display:flex;gap:14px;font-size:13px;color:var(--text-secondary);margin-bottom:4px"><span><i style="display:inline-block;width:10px;height:10px;background:#B8BCC2;border-radius:2px;margin-right:4px"></i>${PY} 점수</span><span><i style="display:inline-block;width:10px;height:10px;background:var(--skb-red);border-radius:2px;margin-right:4px"></i>${LY} 점수</span></div><svg viewBox="0 0 ${W} ${H}" role="img" aria-label="사업군별 평균 모멘텀 점수">`;
+  for(let v=0;v<=5;v++) s+=`<line class="grid-line" x1="${P.l}" x2="${W-P.r}" y1="${y(v)}" y2="${y(v)}"/><text class="axis" x="${P.l-6}" y="${y(v)+4}" text-anchor="end">${v}</text>`;
+  secs.forEach((d,i)=>{[["a24","#B8BCC2",PY],["a25","var(--skb-red)",LY]].forEach(([k,col,yr],j)=>{
+      const x=P.l+gw*i+(gw-2*bw-2)/2+j*(bw+2),v=d[k]; if(v==null) return;
+      s+=`<rect x="${x}" y="${y(v)}" width="${bw}" height="${Math.max(1,y(0)-y(v))}" rx="3" fill="${col}"/><text class="vlabel" x="${x+bw/2}" y="${y(v)-5}" text-anchor="middle">${v.toFixed(1)}</text>`;
+      s+=`<rect class="hit" x="${x}" y="${P.t}" width="${bw}" height="${H-P.t-P.b}" data-tip="<b>${d.s} · ${yr}</b>평균 ${v.toFixed(2)}점 (${d.n}곳)"/>`;});
+    s+=`<text class="axis" x="${P.l+gw*i+gw/2}" y="${H-20}" text-anchor="middle">${d.s}</text><text class="axis" x="${P.l+gw*i+gw/2}" y="${H-4}" text-anchor="middle" style="font-size:11px">${d.n}곳</text>`;});
+  const el=document.getElementById("sectorChart"); el.innerHTML=s+"</svg>";
+  el.querySelectorAll("[data-tip]").forEach(r=>{r.onmousemove=e=>showTip(e,r.dataset.tip);r.onmouseleave=hideTip;});
+}
+function table(){
+  const L=list(), n=v=>v<0?`<span class="neg">${fmt(v)}</span>`:fmt(v);
+  document.getElementById("table").innerHTML=`<thead><tr><th>회사</th><th>사업군</th><th>기준</th><th>연도</th><th>점수</th><th>매출</th><th>매출 증감</th><th>영업이익</th><th>영업이익 증감</th><th>영업이익률</th><th>순이익</th><th>부채비율</th><th>부채비율 증감</th></tr></thead><tbody>`+
+   L.map(c=>`<tr><td>${c.name}</td><td>${c.sector}</td><td style="text-align:left">${c.basis}</td><td>${c.lastY}</td><td>${c.score}</td><td>${fmt(c.B.sales)}</td><td>${sg(c.salesG,"%")}</td><td>${n(c.B.op)}</td><td>${n(c.opD).replace(/^(\d)/,"+$1")}</td><td>${c.B.margin==null?"-":c.B.margin.toFixed(1)+"%"}</td><td>${n(c.B.net)}</td><td>${c.B.debtRatio==null?"자본잠식":c.B.debtRatio.toFixed(1)+"%"}</td><td>${sg(c.drD,"%p")}</td></tr>`).join("")+"</tbody>";
+}
+document.getElementById("notes").innerHTML=[
+  M.source ? `출처: ${M.source}. 입력 원본 ${M.rawRows}행.` : `입력 원본 ${M.rawRows}행.`,
+  ...M.notes,
+  G.excluded.length ? `제외: ${G.excluded.map(e=>e.name+(e.reason?` (${e.reason})`:"")).join(", ")}.` : "",
+  C.some(c=>!c.has2025) ? `${LY} 데이터 없음: ${C.filter(c=>!c.has2025).map(c=>c.name+"("+c.lastY+"년 기준)").join(", ")} → 순위 아래쪽에 따로 두었어요.` : "",
+  `기준: 같은 기준(연결/별도)의 연도가 가장 많은 쪽을 쓰고, 같으면 ${M.prefer}을 우선해요.` + (C.some(c=>c.basis!==M.prefer)? ` ${M.prefer}이 아닌 회사: ${C.filter(c=>c.basis!==M.prefer).map(c=>c.name+"("+c.basis+")").join(", ")}.`:""),
+  `점수: 매출·영업이익·순이익이 늘거나, 영업이익률이 오르거나, 부채비율이 내리면 각 1점. 4~5점 개선, 2~3점 혼조, 0~1점 악화. 적자 폭이 줄어도 '증가'로 봐요.`,
+  `부채비율 = 부채총계 ÷ 자본총계. 자본이 0 이하면 '자본잠식'으로 표시하고 하락 점수를 주지 않아요.`,
+  `이 화면은 숫자의 방향만 보여줘요. 인수·합병·분할 같은 회사 구조 변화나 일회성 손익은 반영하지 않았어요.`
+].filter(Boolean).map(t=>`<li>${t}</li>`).join("");
+kpis(); filters(); rank(); sectorChart(); table();
+</script>
+</body>
+</html>
