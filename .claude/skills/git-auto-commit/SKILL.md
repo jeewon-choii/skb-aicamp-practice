@@ -11,11 +11,13 @@ AI가 파일 작업을 마칠 때마다 바뀐 파일을 하나의 커밋으로 
 
 ## 스킬 구성
 
-| 파일 | 역할 |
-|---|---|
-| `scripts/auto-commit.sh` | macOS·Linux·Git Bash용 자동 커밋 스크립트 |
-| `scripts/auto-commit.ps1` | Windows PowerShell용 자동 커밋 스크립트 (동작 동일) |
-| `templates/gitignore` | 커밋하지 않을 파일 목록의 기본값 |
+이 스킬은 `SKILL.md` 파일 하나로 되어 있다. 필요한 스크립트와 `.gitignore` 기본값은 맨 아래 **부록**에 원문으로 들어 있다. 설정할 때 부록 내용을 작업 폴더에 파일로 저장해서 쓴다.
+
+| 부록 | 저장할 위치 | 용도 |
+|---|---|---|
+| 부록 A | `<작업폴더>/.claude/auto-commit.sh` | macOS·Linux·Git Bash용 자동 커밋 스크립트 |
+| 부록 B | `<작업폴더>/.claude/auto-commit.ps1` | Windows PowerShell용 자동 커밋 스크립트 (동작 동일) |
+| 부록 C | `<작업폴더>/.gitignore` | 커밋하지 않을 파일 목록의 기본값 |
 
 두 스크립트가 하는 일:
 
@@ -49,16 +51,16 @@ AI가 파일 작업을 마칠 때마다 바뀐 파일을 하나의 커밋으로 
    git config i18n.logOutputEncoding utf-8
    ```
    macOS에서는 `git config core.precomposeunicode true`도 추가한다. 한글 파일명이 자음·모음으로 나뉘어 저장되는 문제를 막는다.
-4. `.gitignore`가 없으면 `templates/gitignore`를 복사한다. 있으면 기존 내용을 지우지 말고 빠진 줄만 추가한다.
+4. `.gitignore`가 없으면 부록 C 내용으로 만든다. 있으면 기존 내용을 지우지 말고 빠진 줄만 추가한다.
 5. 커밋하기 전에 `git status --porcelain`으로 올라갈 파일을 확인한다. `.env`, 비밀번호·API 키가 든 파일, 매우 큰 파일(수십 MB 이상)이 보이면 사용자에게 알리고 `.gitignore`에 넣을지 묻는다.
 6. 첫 커밋: `git add -A` 후 `git commit -m "작업 폴더 첫 기록"`. 커밋된 파일 개수를 알려준다.
 
 ## 3. 자동 커밋 연결
 
-스크립트를 작업 폴더 안 고정 위치에 복사한다. 스킬 폴더 경로는 플랫폼마다 다르므로, 복사해두면 스킬 위치와 상관없이 실행된다.
+부록의 스크립트를 **한 글자도 바꾸지 말고** 작업 폴더 안 고정 위치에 파일로 저장한다. 운영체제에 맞는 것 하나만 저장해도 된다.
 
-- macOS·Linux·Git Bash: `<작업폴더>/.claude/auto-commit.sh` (실행 권한 `chmod +x`)
-- Windows PowerShell: `<작업폴더>/.claude/auto-commit.ps1`
+- macOS·Linux·Git Bash: 부록 A → `<작업폴더>/.claude/auto-commit.sh`, 저장 후 `chmod +x`
+- Windows PowerShell: 부록 B → `<작업폴더>/.claude/auto-commit.ps1`. Windows PowerShell 5.1이 한글을 읽을 수 있게 **UTF-8(BOM 포함)**으로 저장한다.
 
 그다음 실행 환경에 맞는 방법 하나를 고른다.
 
@@ -134,3 +136,117 @@ Windows: `command`를 `powershell -NoProfile -ExecutionPolicy Bypass -File \"%CL
 - `git push`, 원격 저장소 추가, `--global` 설정 변경을 사용자 요청 없이 하지 않는다.
 - 비밀값이 든 파일을 커밋하지 않는다.
 - 사용자 이름·이메일을 추측해서 넣지 않는다.
+
+## 부록 A. auto-commit.sh
+
+```sh
+#!/bin/sh
+# 작업 폴더에서 바뀐 파일을 한 번에 자동 커밋한다.
+# 사용: sh auto-commit.sh [폴더]   (폴더를 안 주면 CLAUDE_PROJECT_DIR → 현재 폴더 순)
+# - 바뀐 파일이 없으면 아무것도 하지 않는다.
+# - 병합·리베이스 중이거나 다른 Git 작업이 진행 중이면 건너뛴다.
+# - .gitignore에 있는 파일은 커밋하지 않는다.
+# - 원격 저장소로 push하지 않는다.
+# 선택 환경변수: AUTO_COMMIT_TRAILER  커밋 끝에 붙일 줄 (예: "Co-Authored-By: ...")
+#               AUTO_COMMIT_QUIET=1  성공 메시지를 출력하지 않음
+DIR="${1:-${CLAUDE_PROJECT_DIR:-$(pwd)}}"
+cd "$DIR" 2>/dev/null || exit 0
+git rev-parse --is-inside-work-tree >/dev/null 2>&1 || exit 0
+
+GITDIR="$(git rev-parse --git-dir)"
+if [ -e "$GITDIR/MERGE_HEAD" ] || [ -d "$GITDIR/rebase-merge" ] || \
+   [ -d "$GITDIR/rebase-apply" ] || [ -e "$GITDIR/index.lock" ]; then
+  exit 0
+fi
+
+[ -z "$(git status --porcelain)" ] && exit 0
+
+if [ -z "$(git config user.name)" ] || [ -z "$(git config user.email)" ]; then
+  printf '{"systemMessage": "자동 커밋을 건너뛰었어요: git 사용자 이름·이메일이 설정되지 않았어요"}\n'
+  exit 0
+fi
+
+git add -A
+N=$(git -c core.quotepath=false diff --cached --name-only | wc -l | tr -d ' ')
+[ "$N" = "0" ] && exit 0
+
+NAMES=$(git -c core.quotepath=false diff --cached --name-only | head -3 | \
+  while IFS= read -r f; do basename "$f"; done | paste -sd ',' - | sed 's/,/, /g')
+if [ "$N" -gt 3 ]; then
+  NAMES="$NAMES 외 $((N - 3))개"
+fi
+SUBJECT="자동 커밋: $(date '+%Y-%m-%d %H:%M') · 파일 ${N}개 ($NAMES)"
+BODY="$(git -c core.quotepath=false diff --cached --name-status)"
+NOTE="AI 작업이 끝날 때 git-auto-commit 스킬이 만든 커밋"
+
+if [ -n "$AUTO_COMMIT_TRAILER" ]; then
+  git commit -q -m "$SUBJECT" -m "$BODY" -m "$NOTE" -m "$AUTO_COMMIT_TRAILER" || exit 0
+else
+  git commit -q -m "$SUBJECT" -m "$BODY" -m "$NOTE" || exit 0
+fi
+
+[ "$AUTO_COMMIT_QUIET" = "1" ] || printf '{"systemMessage": "자동 커밋했어요 (파일 %s개)"}\n' "$N"
+exit 0
+```
+
+## 부록 B. auto-commit.ps1
+
+```powershell
+# 작업 폴더에서 바뀐 파일을 한 번에 자동 커밋한다 (Windows PowerShell용).
+# 사용: powershell -NoProfile -ExecutionPolicy Bypass -File auto-commit.ps1 [-Dir 폴더]
+# 동작은 auto-commit.sh와 같다. push하지 않는다.
+param([string]$Dir = $(if ($env:CLAUDE_PROJECT_DIR) { $env:CLAUDE_PROJECT_DIR } else { (Get-Location).Path }))
+$ErrorActionPreference = 'SilentlyContinue'
+[Console]::OutputEncoding = [System.Text.Encoding]::UTF8
+$OutputEncoding = [System.Text.Encoding]::UTF8
+if (-not (Test-Path -LiteralPath $Dir)) { exit 0 }
+Set-Location -LiteralPath $Dir
+if ((git rev-parse --is-inside-work-tree 2>$null) -ne 'true') { exit 0 }
+
+$gitDir = git rev-parse --git-dir
+foreach ($p in 'MERGE_HEAD','rebase-merge','rebase-apply','index.lock') {
+  if (Test-Path -LiteralPath (Join-Path $gitDir $p)) { exit 0 }
+}
+if (-not (git status --porcelain)) { exit 0 }
+if (-not (git config user.name) -or -not (git config user.email)) {
+  Write-Output '{"systemMessage": "자동 커밋을 건너뛰었어요: git 사용자 이름·이메일이 설정되지 않았어요"}'
+  exit 0
+}
+
+git add -A
+$files = @(git -c core.quotepath=false diff --cached --name-only)
+$n = $files.Count
+if ($n -eq 0) { exit 0 }
+$names = ($files | Select-Object -First 3 | ForEach-Object { Split-Path $_ -Leaf }) -join ', '
+if ($n -gt 3) { $names = "$names 외 $($n - 3)개" }
+$subject = "자동 커밋: $(Get-Date -Format 'yyyy-MM-dd HH:mm') · 파일 ${n}개 ($names)"
+$body = (git -c core.quotepath=false diff --cached --name-status) -join "`n"
+$note = 'AI 작업이 끝날 때 git-auto-commit 스킬이 만든 커밋'
+
+$gitArgs = @('-c','i18n.commitEncoding=utf-8','commit','-q','-m',$subject,'-m',$body,'-m',$note)
+if ($env:AUTO_COMMIT_TRAILER) { $gitArgs += @('-m', $env:AUTO_COMMIT_TRAILER) }
+git @args
+if ($LASTEXITCODE -ne 0) { exit 0 }
+if ($env:AUTO_COMMIT_QUIET -ne '1') { Write-Output "{`"systemMessage`": `"자동 커밋했어요 (파일 ${n}개)`"}" }
+exit 0
+```
+
+## 부록 C. .gitignore 기본값
+
+```gitignore
+# 이 폴더 전용 Python 공간
+.venv/
+__pycache__/
+
+# macOS·Windows 폴더 설정 파일
+.DS_Store
+Thumbs.db
+
+# Office 파일을 열어 둘 때 생기는 임시 잠금 파일
+~$*
+
+# API 키 등 비밀값 (절대 커밋하지 않음)
+.env
+.env.*
+!.env.example
+```
